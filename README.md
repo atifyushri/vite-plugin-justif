@@ -1,6 +1,6 @@
 # vite-plugin-justif
 
-[justif](https://github.com/Lyall/justif) for Vite, without the CDN script.
+[justif](https://github.com/lyallcooper/justif) for Vite, without the CDN script.
 
 `justif` ships its auto-enhancement as a `<script type="module">` from a CDN,
 and the CDN build loads non-English hyphenation with dynamically built
@@ -84,21 +84,28 @@ import type { Hyphenator, JustifAutoHandle } from "vite-plugin-justif/runtime/au
 - `reconfigure()` — re-reads `--justif-*` configuration and rebuilds
   controllers. (There is no style watcher; call it when config changes.)
 
-[JustifyController]: https://github.com/Lyall/justif
+[JustifyController]: https://github.com/lyallcooper/justif
 
 ## Configuration
 
-justif's CSS configuration is fully supported: set the `layout-options` on any
-element and they apply per group, e.g.
+justif's declarative `--justif-*` layout options are fully supported: set
+them on any element and they apply per group, e.g.
 
 ```css
 :root {
-    --justif-paragraph-layout: 50.5;
-    --justif-inline-alignment: center;
+    --justif-hanging-punctuation: all-line-edges;
+    --justif-expansion: 4%;
+    --justif-last-line-min-width: none;
 }
 ```
 
-See the [justif README](https://github.com/Lyall/justif) for the available
+The full surface: `--justif-hanging-punctuation`, `--justif-protrusion`,
+`--justif-expansion`, `--justif-tracking`, `--justif-last-line-min-width`,
+`--justif-last-line-fit`, `--justif-space-stretch`, `--justif-space-shrink`.
+(There is no live style watcher — call `window.justif.reconfigure()` after
+changing them at runtime.)
+
+See the [justif README](https://github.com/lyallcooper/justif) for the available
 properties, keywords, and measurement semantics.
 
 ## How It Works

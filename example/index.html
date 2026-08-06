@@ -13,9 +13,14 @@
                 <h1>Set&nbsp;Justified</h1>
                 <p class="subtitle">
                     Every paragraph on this page is laid out by
-                    <a href="https://github.com/Lyall/justif">justif</a>, bundled by
+                    <a href="https://github.com/lyallcooper/justif">justif</a>, bundled by
                     <strong>vite-plugin-justif</strong> — no CDN script, one plugin line.
                 </p>
+                <label class="switch">
+                    <input type="checkbox" id="justif-toggle" checked />
+                    <span class="track" aria-hidden="true"></span>
+                    justif
+                </label>
             </header>
 
             <article>
@@ -73,5 +78,22 @@
                 </p>
             </footer>
         </main>
+        <script type="module">
+            // Flip between justif's layout and the browser's native
+            // justification, using only the public window.justif surface.
+            const box = document.getElementById("justif-toggle");
+            box.addEventListener("change", async () => {
+                box.disabled = true;
+                try {
+                    if (box.checked) {
+                        await window.justif.reconfigure();
+                    } else {
+                        window.justif.unjustify(document.querySelectorAll("[data-justif]"));
+                    }
+                } finally {
+                    box.disabled = false;
+                }
+            });
+        </script>
     </body>
 </html>

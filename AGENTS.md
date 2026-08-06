@@ -1,6 +1,6 @@
 # vite-plugin-justif — Agent Notes
 
-Vite plugin bundling [justif](https://github.com/Lyall/justif)'s auto-enhancement
+Vite plugin bundling [justif](https://github.com/lyallcooper/justif)'s auto-enhancement
 without its CDN script. Unpublished; breaking changes are currently fine.
 
 ## Commands
