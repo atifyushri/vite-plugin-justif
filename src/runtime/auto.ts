@@ -31,6 +31,7 @@ import {
     type JustifyOptions,
     type LayoutOptions,
 } from "justif";
+import { CLOAK_ATTRIBUTE, CLOAK_REVEAL_TIMEOUT_MS } from "../cloak.js";
 import { parseCssConfiguration, type CssProperty } from "./config.js";
 import { DEFAULT_SELECTOR, resolveJustifLanguage } from "../languages.js";
 
@@ -85,6 +86,11 @@ declare global {
     interface Window {
         justif?: JustifAutoHandle;
     }
+}
+
+/** Uncover cloaked candidates (no-op on an uncloaked page). */
+function revealCloak(): void {
+    document.documentElement.removeAttribute(CLOAK_ATTRIBUTE);
 }
 
 /**
@@ -159,6 +165,18 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
     const booted = pending
         .then(() => Promise.allSettled(controllers.map((c) => c.ready)))
         .then(() => undefined);
+
+    // Cloak reveal: if the page hid its candidates pre-paint (the plugin's
+    // `cloak` option, or a hand-written attribute under CSP), uncover them
+    // once layout settled — or after the timeout regardless, so a hung chunk
+    // request can never trap content.
+    if (document.documentElement.hasAttribute(CLOAK_ATTRIBUTE)) {
+        const fallback = setTimeout(revealCloak, CLOAK_REVEAL_TIMEOUT_MS);
+        void booted.then(() => {
+            clearTimeout(fallback);
+            revealCloak();
+        });
+    }
 
     const handle: JustifAutoHandle = {
         justify,

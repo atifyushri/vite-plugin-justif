@@ -129,6 +129,17 @@ blockquote p {
     text-align: justify;
 }
 
+/* Soften the cloak reveal: the plugin's data-justif-cloak attribute holds
+ * paragraphs at opacity 0, and its removal fades the typeset text in. */
+article p,
+blockquote p {
+    transition: opacity 0.25s ease;
+}
+
+html[data-justif-cloak] :is(article p, blockquote p) {
+    opacity: 0;
+}
+
 article > p + p {
     margin-top: 1em;
 }

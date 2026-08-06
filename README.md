@@ -59,6 +59,9 @@ vitePluginJustif({
     debug: true,
     /** Inject the auto entry into every HTML file (default: true). */
     inject: false,
+    /** Hide candidates until typeset — no flash of native justification
+     *  (default: false). Reveals after 1.5s even if enhancement stalls. */
+    cloak: true,
 });
 ```
 
@@ -69,6 +72,29 @@ and `debug` are baked into the generated module, so they apply either way.
 ```ts
 import "virtual:justif/auto";
 ```
+
+### Avoiding the Enhancement Flash
+
+First paint happens before module scripts run, so without help the browser
+shows native justification for an instant before justif retypesets. `cloak:
+true` fixes this: candidates are hidden by a pre-paint style plus a
+`data-justif-cloak` attribute on `<html>`, and the runtime removes the
+attribute once layout settles (or after 1.5s, whichever comes first, so
+content is never trapped). Your CSS can key transitions off the attribute for
+a fade-in:
+
+```css
+article p {
+    transition: opacity 0.25s ease;
+}
+html[data-justif-cloak] article p {
+    opacity: 0;
+}
+```
+
+Under a strict CSP (`inject: false`), write the attribute yourself —
+`<html data-justif-cloak>` — and the runtime still reveals; no inline script
+is involved.
 
 ### Runtime API
 

@@ -15,7 +15,9 @@ export default defineConfig({
     plugins: [
         // The whole setup. `languages` doubles as bundle-size control:
         // only these three pattern files ship, each as its own lazy chunk.
-        vitePluginJustif({ languages: ["en-us", "de", "fr"] }),
+        // `cloak` holds candidates invisible until justif has typeset them,
+        // so the native layout never flashes before enhancement.
+        vitePluginJustif({ languages: ["en-us", "de", "fr"], cloak: true }),
     ],
     resolve: {
         // In-repo counterpart of the package's `runtime/auto` subpath export;

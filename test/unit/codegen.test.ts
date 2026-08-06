@@ -145,3 +145,33 @@ describe("vitePluginJustif options", () => {
         ).toThrow(/unknown hyphenation language "zz"/);
     });
 });
+
+/** Invoke the plugin's `transformIndexHtml` hook the way Vite would. */
+function injectedTags(plugin: ReturnType<typeof vitePluginJustif>) {
+    const hook = plugin.transformIndexHtml;
+    if (hook === undefined || typeof hook === "function" || !("handler" in hook)) {
+        throw new Error("expected an object transformIndexHtml hook");
+    }
+    return (hook.handler as () => Array<{ tag: string; children?: string }>)();
+}
+
+describe("vitePluginJustif cloak injection", () => {
+    it("injects only the entry script by default", () => {
+        const tags = injectedTags(vitePluginJustif());
+        expect(tags).toHaveLength(1);
+        expect(tags[0]!.children).toContain("virtual:justif/auto");
+    });
+
+    it("cloak adds a pre-paint hiding style and attribute setter", () => {
+        const tags = injectedTags(vitePluginJustif({ cloak: true, selector: "article p" }));
+        expect(tags).toHaveLength(3);
+        const [style, setter, entry] = tags;
+        expect(style!.tag).toBe("style");
+        expect(style!.children).toBe(
+            `html[data-justif-cloak] :is(article p) { visibility: hidden; }`,
+        );
+        expect(setter!.tag).toBe("script");
+        expect(setter!.children).toContain(`setAttribute("data-justif-cloak", "")`);
+        expect(entry!.children).toContain("virtual:justif/auto");
+    });
+});

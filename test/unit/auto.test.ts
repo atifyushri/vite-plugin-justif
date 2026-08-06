@@ -44,6 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
     document.body.innerHTML = "";
+    document.documentElement.removeAttribute("data-justif-cloak");
     justifyCalls.length = 0;
     destroyed.length = 0;
     delete window.justif;
@@ -164,5 +165,35 @@ describe("bootAuto", () => {
         })!;
         await handle.booted;
         expect(justifyCalls[0]!.options.onSkip).toBe(onSkip);
+    });
+
+    it("removes the cloak attribute once booted", async () => {
+        document.documentElement.setAttribute("data-justif-cloak", "");
+        addParagraph("A paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+        await Promise.resolve();
+        expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(false);
+    });
+
+    it("reveals via the fallback timer when a loader hangs", async () => {
+        vi.useFakeTimers();
+        try {
+            document.documentElement.setAttribute("data-justif-cloak", "");
+            addParagraph("A paragraph.");
+            bootAuto({ loaders: { "en-us": () => new Promise(() => {}) } });
+            expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(true);
+            await vi.advanceTimersByTimeAsync(1500);
+            expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("leaves an uncloaked page alone", async () => {
+        addParagraph("A paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+        expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(false);
     });
 });

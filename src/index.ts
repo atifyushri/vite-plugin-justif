@@ -18,6 +18,7 @@
  * distribution model) have no meaning under a plain Rolldown/Rollup build.
  */
 import type { HtmlTagDescriptor, Plugin } from "vite";
+import { CLOAK_ATTRIBUTE, cloakCss } from "./cloak.js";
 import { BUNDLED_LANGUAGE_IDS, DEFAULT_SELECTOR, type JustifLanguage } from "./languages.js";
 import {
     AUTO_MODULE_ID,
@@ -55,6 +56,16 @@ export interface JustifVitePluginOptions {
      * inline scripts are blocked).
      */
     inject?: boolean;
+    /**
+     * Hide candidate paragraphs until justif has typeset them, eliminating
+     * the flash of natively-justified text before enhancement. Defaults to
+     * `false`. Injects a pre-paint style and a `data-justif-cloak` attribute
+     * on `<html>`; the runtime removes the attribute once layout has settled,
+     * or after 1.5s regardless, so content is never trapped. With
+     * `inject: false`, write `<html data-justif-cloak>` in your HTML source
+     * instead — the runtime still reveals.
+     */
+    cloak?: boolean;
 }
 
 /** `resolveId`/`load` filters: only our two virtual ids (with the null-byte
@@ -77,6 +88,7 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
     const selector = options.selector ?? DEFAULT_SELECTOR;
     const debug = options.debug ?? false;
     const inject = options.inject ?? true;
+    const cloak = options.cloak ?? false;
 
     const plugin: Plugin = {
         name: "vite-plugin-justif",
@@ -108,14 +120,31 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
             // is treated as an entry and bundled (dev and build alike).
             order: "pre",
             handler(): HtmlTagDescriptor[] {
-                return [
-                    {
-                        tag: "script",
-                        attrs: { type: "module" },
-                        children: `import ${JSON.stringify(AUTO_MODULE_ID)};`,
-                        injectTo: "head",
-                    },
-                ];
+                const tags: HtmlTagDescriptor[] = [];
+                if (cloak) {
+                    // Style plus a synchronous (non-module) attribute setter:
+                    // both apply before first paint, so cloaked candidates
+                    // are never painted natively. The runtime reveals.
+                    tags.push(
+                        {
+                            tag: "style",
+                            children: cloakCss(selector),
+                            injectTo: "head",
+                        },
+                        {
+                            tag: "script",
+                            children: `document.documentElement.setAttribute(${JSON.stringify(CLOAK_ATTRIBUTE)}, "");`,
+                            injectTo: "head",
+                        },
+                    );
+                }
+                tags.push({
+                    tag: "script",
+                    attrs: { type: "module" },
+                    children: `import ${JSON.stringify(AUTO_MODULE_ID)};`,
+                    injectTo: "head",
+                });
+                return tags;
             },
         };
     }
