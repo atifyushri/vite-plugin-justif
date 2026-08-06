@@ -46,6 +46,7 @@
         "format:check": "oxfmt --check",
         "test": "tsup && tsc -p tsconfig.build.json && vitest run",
         "test:watch": "vitest",
+        "version-packages": "changeset version && oxfmt",
         "check": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run",
         "prepublishOnly": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run"
     },
