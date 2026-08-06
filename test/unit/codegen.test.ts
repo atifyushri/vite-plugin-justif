@@ -2,15 +2,27 @@ import { describe, it, expect } from "vitest";
 import {
   generateCoreModule,
   generateAutoModule,
+  RESOLVED_AUTO_MODULE_ID,
+  RESOLVED_CORE_MODULE_ID,
 } from "../../src/virtual.js";
 import {
   BUNDLED_LANGUAGE_IDS,
   hyphenatorExportName,
-} from "../../src/constants.js";
-import { resolveJustifLanguage } from "../../src/lang.js";
-import {
-  resolveJustifPluginOptions,
-} from "../../src/index.js";
+  resolveJustifLanguage,
+} from "../../src/languages.js";
+import { vitePluginJustif } from "../../src/index.js";
+
+/** Invoke the plugin's `load` hook the way Vite would for a resolved id. */
+function loadVirtual(
+  plugin: ReturnType<typeof vitePluginJustif>,
+  id: string,
+): string | null {
+  const hook = plugin.load;
+  if (hook === undefined || typeof hook === "function") {
+    throw new Error("expected an object load hook");
+  }
+  return (hook.handler as (id: string) => string | null)(id);
+}
 
 describe("hyphenatorExportName", () => {
   it("camelCases the language id to justif's export name", () => {
@@ -67,7 +79,7 @@ describe("generateCoreModule", () => {
 });
 
 describe("generateAutoModule", () => {
-  it("ships every selected language as a static-string lazy import", () => {
+  it("ships every selected language as a static-string lazy loader", () => {
     const code = generateAutoModule({
       languages: ["en-us", "ca"],
       selector: "article p",
@@ -76,14 +88,13 @@ describe("generateAutoModule", () => {
     expect(code).toContain(
       `import { bootAuto } from "vite-plugin-justif/runtime/auto";`,
     );
+    expect(code).toContain("loaders: {");
     expect(code).toContain(
       `"en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS)`,
     );
     expect(code).toContain(
       `"ca": () => import("justif/hyphenate/ca").then((m) => m.hyphenateCa)`,
     );
-    expect(code).toContain(`languageIds: ["en-us","ca"]`);
-    expect(code).toContain(`loadHyphenator: (id) => loaders[id]?.()`);
     expect(code).toContain(`selector: "article p"`);
     expect(code).toContain(`debug: true`);
     // Every specifier is a string literal a bundler can code-split; nothing
@@ -102,37 +113,44 @@ describe("generateAutoModule", () => {
   });
 });
 
-describe("resolveJustifPluginOptions", () => {
-  it("defaults to all languages, injection on", () => {
-    const opts = resolveJustifPluginOptions();
-    expect(opts.languages).toEqual(BUNDLED_LANGUAGE_IDS);
-    expect(opts.inject).toEqual({
-      selector: "p, li, dd, blockquote, figcaption",
-      debug: false,
-    });
-    expect(opts.coreModule).toBe(true);
-    expect(opts.autoModule).toBe(true);
+describe("vitePluginJustif options", () => {
+  it("defaults to all languages, stock selector, injection on", () => {
+    const plugin = vitePluginJustif();
+    const auto = loadVirtual(plugin, RESOLVED_AUTO_MODULE_ID)!;
+    for (const id of BUNDLED_LANGUAGE_IDS) {
+      expect(auto).toContain(`"${id}": () => import(`);
+    }
+    expect(auto).toContain(`selector: "p, li, dd, blockquote, figcaption"`);
+    expect(auto).toContain("debug: false");
+    expect(plugin.transformIndexHtml).toBeDefined();
   });
 
-  it("dedupes languages and accepts a selector", () => {
-    const opts = resolveJustifPluginOptions({
-      languages: ["de", "de", "en-us"],
-      inject: { selector: ".prose p", debug: true },
+  it("dedupes languages and limits the generated modules to them", () => {
+    const plugin = vitePluginJustif({ languages: ["de", "de", "en-us"] });
+    const core = loadVirtual(plugin, RESOLVED_CORE_MODULE_ID)!;
+    expect(core.match(/hyphenateDe\b/g)).not.toBeNull();
+    expect(core).not.toContain("hyphenateCa");
+    const auto = loadVirtual(plugin, RESOLVED_AUTO_MODULE_ID)!;
+    expect(auto.match(/justif\/hyphenate\/de/g)).toHaveLength(1);
+    expect(auto).not.toContain("hyphenateCa");
+  });
+
+  it("bakes selector and debug into the auto module even without injection", () => {
+    const plugin = vitePluginJustif({
+      selector: ".prose p",
+      debug: true,
+      inject: false,
     });
-    expect(opts.languages).toEqual(["de", "en-us"]);
-    expect(opts.inject).toEqual({ selector: ".prose p", debug: true });
+    const auto = loadVirtual(plugin, RESOLVED_AUTO_MODULE_ID)!;
+    expect(auto).toContain(`selector: ".prose p"`);
+    expect(auto).toContain("debug: true");
+    expect(plugin.transformIndexHtml).toBeUndefined();
   });
 
   it("rejects unknown languages", () => {
     expect(() =>
       // @ts-expect-error invalid language for the test
-      resolveJustifPluginOptions({ languages: ["zz"] }),
+      vitePluginJustif({ languages: ["zz"] }),
     ).toThrow(/unknown hyphenation language "zz"/);
-  });
-
-  it("rejects injection without the auto module", () => {
-    expect(() =>
-      resolveJustifPluginOptions({ autoModule: false }),
-    ).toThrow(/requires the auto module/);
   });
 });

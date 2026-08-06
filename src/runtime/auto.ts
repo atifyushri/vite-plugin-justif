@@ -7,21 +7,22 @@
  * elements whose computed `text-align` is `justify`/`justify-all`, group them
  * by (language, resolved `--justif-*` configuration), and call `justify()`
  * once per group with the matching bundled hyphenator. The result is exposed
- * at `window.justif` with the same escape hatch shape as the CDN script.
+ * at `window.justif` with the same escape hatch shape as the CDN script, and
+ * returned so programmatic callers never need the global.
  *
- * Languages are loaded on demand: the generated auto module hands a
- * `loadHyphenator` that resolves each language through a Vite code-split
- * chunk, so a page in English pays for English patterns only — like the
- * drop-in script, which fetches one pattern file per language the page
- * actually uses.
+ * Languages are loaded on demand and concurrently: the generated auto module
+ * hands a `loaders` table that resolves each language through a Vite
+ * code-split chunk, so a page in English pays for English patterns only —
+ * like the drop-in script, which fetches one pattern file per language the
+ * page actually uses.
  *
  * Not reproduced from the drop-in: dynamic per-language pattern loading
  * through runtime-built specifiers (the plugin's static-string imports are
  * the bundler-safe replacement) and the transition-watcher that applies CSS
- * changes live (call `window.justif.reconfigure()` instead).
+ * changes live (call `reconfigure()` instead).
  *
  * Importing this module is SSR-safe: nothing runs until `bootAuto()` is
- * called, and `bootAuto()` no-ops outside a browser.
+ * called, and `bootAuto()` no-ops (returns undefined) outside a browser.
  */
 import {
   justify,
@@ -30,30 +31,26 @@ import {
   type JustifyOptions,
   type LayoutOptions,
 } from "justif";
-import {
-  parseCssConfiguration,
-  type CssProperty,
-} from "./config.js";
-import { DEFAULT_SELECTOR } from "../constants.js";
-import { resolveJustifLanguage } from "../lang.js";
+import { parseCssConfiguration, type CssProperty } from "./config.js";
+import { DEFAULT_SELECTOR, resolveJustifLanguage } from "../languages.js";
 
 export type Hyphenator = (word: string) => readonly string[];
 
+/**
+ * Lazy per-language loader. Must resolve to the language's hyphenator, or
+ * `undefined` when the language has no pattern (spacing-only justification —
+ * justif's graceful degradation).
+ */
+export type HyphenatorLoader = () => Promise<Hyphenator | undefined>;
+
 export interface AutoBootOptions {
   /**
-   * Hyphenator ids the bootstrap may resolve against. Either a synchronous
-   * `languages` map (everything bundled up front) or a lazy
-   * `languageIds` + `loadHyphenator` pair (per-language chunks) — the
-   * generated `virtual:justif/auto` module uses the latter.
+   * Per-language lazy loaders; the keys define the available language set.
+   * The generated `virtual:justif/auto` module builds one entry per bundled
+   * language, each a static-string `import()` Vite splits into its own
+   * chunk. Defaults to `{}` — every group justifies spacing-only.
    */
-  languages?: Readonly<Record<string, Hyphenator>>;
-  languageIds?: readonly string[];
-  /**
-   * Lazy per-language loader. Must resolve to the language's hyphenator, or
-   * `undefined` when the language has no pattern (spacing-only
-   * justification — justif's graceful degradation).
-   */
-  loadHyphenator?: (id: string) => Promise<Hyphenator | undefined>;
+  loaders?: Readonly<Record<string, HyphenatorLoader>>;
   /** Candidate selector; defaults to justif's stock list. */
   selector?: string;
   /** Log a reason for every paragraph kept on native layout. */
@@ -62,8 +59,23 @@ export interface AutoBootOptions {
   onSkip?: JustifyOptions["onSkip"];
 }
 
+/** What `bootAuto` returns and exposes at `window.justif`. */
+export interface JustifAutoHandle {
+  justify: typeof justify;
+  unjustify: typeof unjustify;
+  /** The active controllers; rebuilt in place across `reconfigure()`. */
+  controllers: JustifyController[];
+  /** Settles once every group's fonts settled and layout converged. */
+  booted: Promise<void>;
+  /**
+   * Re-read the `--justif-*` configuration and rebuild controllers.
+   * Unlike the CDN script there is no watcher; changes apply when this
+   * is called. Resolves once the rebuilt controllers have settled.
+   */
+  reconfigure: () => Promise<void>;
+}
+
 interface Group {
-  key: string;
   id: string | null;
   options: LayoutOptions;
   els: HTMLElement[];
@@ -71,34 +83,23 @@ interface Group {
 
 declare global {
   interface Window {
-    justif?: {
-      justify: typeof justify;
-      unjustify: typeof unjustify;
-      controllers: JustifyController[];
-      /** Settles once every group's fonts settled and layout converged. */
-      booted: Promise<void>;
-      /**
-       * Re-read the `--justif-*` configuration and rebuild controllers.
-       * Unlike the CDN script there is no watcher; changes apply when this
-       * is called. Resolves once the rebuilt controllers have settled.
-       */
-      reconfigure: () => Promise<void>;
-    };
+    justif?: JustifAutoHandle;
   }
 }
 
 /**
  * Run the auto-enhancement. Safe to call repeatedly (that is what
  * `reconfigure` does): controllers are destroyed and the scan rebuilt.
+ * Returns the same handle it assigns to `window.justif`, or `undefined`
+ * outside a browser.
  */
-export function bootAuto(options: AutoBootOptions): void {
-  if (typeof document === "undefined") return;
+export function bootAuto(
+  options: AutoBootOptions = {},
+): JustifAutoHandle | undefined {
+  if (typeof document === "undefined") return undefined;
 
-  const languages = options.languages;
-  const loadHyphenator = options.loadHyphenator;
-  const available = new Set<string>(
-    options.languageIds ?? Object.keys(languages ?? {}),
-  );
+  const loaders = options.loaders ?? {};
+  const available = new Set(Object.keys(loaders));
   const selector = options.selector ?? DEFAULT_SELECTOR;
   const onSkip: JustifyOptions["onSkip"] =
     options.onSkip ??
@@ -130,7 +131,7 @@ export function bootAuto(options: AutoBootOptions): void {
       const groupKey = `${id ?? "\u0001"}\u0000${key}`;
       const group = groups.get(groupKey);
       if (group === undefined) {
-        groups.set(groupKey, { key: groupKey, id, options, els: [el] });
+        groups.set(groupKey, { id, options, els: [el] });
       } else {
         group.els.push(el);
       }
@@ -140,23 +141,23 @@ export function bootAuto(options: AutoBootOptions): void {
 
   /**
    * Enhance the current candidates into the shared `controllers` array.
-   * Lazy language groups commit once their hyphenator (or its absence) is
-   * known; unlabeled and English-only pages therefore never load another
-   * chunk, and a group without a pattern module gets spacing-only
-   * justification, exactly like the drop-in.
+   * Groups commit concurrently, each as soon as its hyphenator (or its
+   * absence) is known; unlabeled and English-only pages therefore never wait
+   * on another language's chunk. A group whose loader rejects is dropped —
+   * its paragraphs keep native layout — without blocking the others. A group
+   * without a pattern module gets spacing-only justification, exactly like
+   * the drop-in.
    */
-  const start = async (controllers: JustifyController[]): Promise<void> => {
-    for (const group of collectGroups()) {
-      let hyphenate: Hyphenator | undefined =
-        group.id === null ? undefined : languages?.[group.id];
-      if (hyphenate === undefined && group.id !== null && loadHyphenator !== undefined) {
-        hyphenate = (await loadHyphenator(group.id)) ?? undefined;
-      }
-      controllers.push(
-        justify(group.els, { ...group.options, hyphenate, onSkip }),
-      );
-    }
-  };
+  const start = (controllers: JustifyController[]): Promise<void> =>
+    Promise.allSettled(
+      collectGroups().map(async (group) => {
+        const hyphenate =
+          group.id === null ? undefined : await loaders[group.id]?.();
+        controllers.push(
+          justify(group.els, { ...group.options, hyphenate, onSkip }),
+        );
+      }),
+    ).then(() => undefined);
 
   const controllers: JustifyController[] = [];
   let pending = start(controllers);
@@ -164,7 +165,7 @@ export function bootAuto(options: AutoBootOptions): void {
     .then(() => Promise.allSettled(controllers.map((c) => c.ready)))
     .then(() => undefined);
 
-  window.justif = {
+  const handle: JustifAutoHandle = {
     justify,
     unjustify,
     // The stable array the drop-in documents; rebuilt in place so held
@@ -181,4 +182,6 @@ export function bootAuto(options: AutoBootOptions): void {
       });
     },
   };
+  window.justif = handle;
+  return handle;
 }

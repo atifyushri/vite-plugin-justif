@@ -170,8 +170,7 @@ describe("vite dev server", () => {
 
         const auto = await server.transformRequest("virtual:justif/auto");
         expect(auto?.code).toContain("bootAuto");
-        expect(auto?.code).toContain('languageIds: ["en-us","de"]');
-        expect(auto?.code).toContain("loadHyphenator: (id) => loaders[id]?.()");
+        expect(auto?.code).toContain("loaders:");
         // Dev rewrites bare specifiers to /@fs/... paths; assert the parts.
         expect(auto?.code).toContain("m.hyphenateEnUS");
         expect(auto?.code).toContain("hyphenate/en-us.js");

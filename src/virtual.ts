@@ -1,5 +1,5 @@
 /**
- * Virtual module code generation.
+ * The plugin's virtual modules: their ids and their code generation.
  *
  * Both modules use fully static import specifiers, so Vite can resolve and
  * bundle every hyphenation language — the thing justif's drop-in script
@@ -17,7 +17,15 @@ import {
   languageModuleId,
   hyphenatorExportName,
   type JustifLanguage,
-} from "./constants.js";
+} from "./languages.js";
+
+/** Virtual module exposing the core API plus every selected hyphenator. */
+export const CORE_MODULE_ID = "virtual:justif";
+/** Virtual module that auto-enhances the page on import. */
+export const AUTO_MODULE_ID = "virtual:justif/auto";
+/** Resolved (null-byte-prefixed) ids, as seen by the `load` hook. */
+export const RESOLVED_CORE_MODULE_ID = "\0" + CORE_MODULE_ID;
+export const RESOLVED_AUTO_MODULE_ID = "\0" + AUTO_MODULE_ID;
 
 export interface AutoModuleOptions {
   /** Bundled languages the generated auto entry ships (as lazy chunks). */
@@ -44,15 +52,15 @@ function hyphenatorTable(languages: readonly JustifLanguage[]): string {
   return `{\n${rows.join("\n")}\n}`;
 }
 
-function languageLoaderTable(languages: readonly JustifLanguage[]): string {
+function loaderTable(languages: readonly JustifLanguage[]): string {
   const rows = languages.map((id) => {
     const name = hyphenatorExportName(id);
     return (
-      `  ${JSON.stringify(id)}: () => ` +
+      `    ${JSON.stringify(id)}: () => ` +
       `import(${JSON.stringify(languageModuleId(id))}).then((m) => m.${name}),`
     );
   });
-  return `{\n${rows.join("\n")}\n}`;
+  return `{\n${rows.join("\n")}\n  }`;
 }
 
 /**
@@ -91,13 +99,10 @@ export function generateAutoModule(options: AutoModuleOptions): string {
   return [
     `import { bootAuto } from "vite-plugin-justif/runtime/auto";`,
     "",
-    `const loaders = ${languageLoaderTable(options.languages)};`,
-    "",
     `bootAuto({`,
     `  selector: ${JSON.stringify(options.selector)},`,
     `  debug: ${options.debug},`,
-    `  languageIds: ${JSON.stringify(options.languages)},`,
-    `  loadHyphenator: (id) => loaders[id]?.(),`,
+    `  loaders: ${loaderTable(options.languages)},`,
     `});`,
     "",
   ].join("\n");

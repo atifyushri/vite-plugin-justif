@@ -19,20 +19,18 @@
  */
 import type { HtmlTagDescriptor, Plugin } from "vite";
 import {
-  AUTO_MODULE_ID,
   BUNDLED_LANGUAGE_IDS,
-  CORE_MODULE_ID,
   DEFAULT_SELECTOR,
+  type JustifLanguage,
+} from "./languages.js";
+import {
+  AUTO_MODULE_ID,
+  CORE_MODULE_ID,
   RESOLVED_AUTO_MODULE_ID,
   RESOLVED_CORE_MODULE_ID,
-  type JustifLanguage,
-} from "./constants.js";
-import {
   generateAutoModule,
   generateCoreModule,
-  type AutoModuleOptions,
 } from "./virtual.js";
-import { resolveJustifLanguage } from "./lang.js";
 
 export interface JustifVitePluginOptions {
   /**
@@ -43,67 +41,24 @@ export interface JustifVitePluginOptions {
    */
   languages?: readonly JustifLanguage[];
   /**
-   * Inject the auto-enhancement entry into every HTML entry file. `true`
-   * (the default) injects a module script that boots justif's auto behavior;
-   * pass an object to set the candidate `selector` and `debug` logging, or
-   * `false` to manage `virtual:justif/auto` yourself from your own entry
-   * (useful under a strict Content-Security-Policy, where inline scripts are
-   * blocked).
+   * Candidate selector baked into `virtual:justif/auto` — which elements the
+   * auto-enhancement considers. Defaults to justif's stock list
+   * (`p, li, dd, blockquote, figcaption`). Applies whether the module is
+   * injected or imported from your own entry.
    */
-  inject?:
-    | boolean
-    | {
-        selector?: string;
-        debug?: boolean;
-      };
-  /** Register `virtual:justif`. Defaults to `true`. */
-  coreModule?: boolean;
-  /** Register `virtual:justif/auto`. Defaults to `true`. */
-  autoModule?: boolean;
-}
-
-export interface ResolvedJustifPluginOptions {
-  languages: readonly JustifLanguage[];
-  inject: { selector: string; debug: boolean } | false;
-  coreModule: boolean;
-  autoModule: boolean;
-}
-
-export function resolveJustifPluginOptions(
-  options: JustifVitePluginOptions = {},
-): ResolvedJustifPluginOptions {
-  const languages = [...new Set(options.languages ?? BUNDLED_LANGUAGE_IDS)];
-  const known = new Set<string>(BUNDLED_LANGUAGE_IDS);
-  for (const id of languages) {
-    if (!known.has(id)) {
-      throw new Error(
-        `vite-plugin-justif: unknown hyphenation language "${id}". ` +
-          `Bundled languages: ${BUNDLED_LANGUAGE_IDS.join(", ")}.`,
-      );
-    }
-  }
-  const inject =
-    options.inject === false
-      ? false
-      : {
-          selector:
-            typeof options.inject === "object" && options.inject.selector !== undefined
-              ? options.inject.selector
-              : DEFAULT_SELECTOR,
-          debug:
-            typeof options.inject === "object" && options.inject.debug !== undefined
-              ? options.inject.debug
-              : false,
-        };
-  const coreModule = options.coreModule ?? true;
-  const autoModule = options.autoModule ?? true;
-  if (inject && !autoModule) {
-    throw new Error(
-      "vite-plugin-justif: HTML injection requires the auto module — " +
-        "set autoModule: true or inject: false.",
-    );
-  }
-  return { languages, inject, coreModule, autoModule };
+  selector?: string;
+  /**
+   * Log a reason for every paragraph the auto-enhancement keeps on native
+   * layout. Defaults to `false`.
+   */
+  debug?: boolean;
+  /**
+   * Inject a module script importing `virtual:justif/auto` into every HTML
+   * entry file. Defaults to `true`. Set `false` to manage the import from
+   * your own entry (useful under a strict Content-Security-Policy, where
+   * inline scripts are blocked).
+   */
+  inject?: boolean;
 }
 
 /** `resolveId`/`load` filters: only our two virtual ids (with the null-byte
@@ -115,43 +70,45 @@ const RESOLVED_ID_FILTER = /^\0virtual:justif([/?]|$)/;
 export function vitePluginJustif(
   options: JustifVitePluginOptions = {},
 ): Plugin {
-  const resolved = resolveJustifPluginOptions(options);
-  const wantsCore = resolved.coreModule;
-  const wantsAuto = resolved.autoModule;
-  const autoOptions: AutoModuleOptions = {
-    languages: resolved.languages,
-    selector: resolved.inject ? resolved.inject.selector : DEFAULT_SELECTOR,
-    debug: resolved.inject ? resolved.inject.debug : false,
-  };
+  const languages = [...new Set(options.languages ?? BUNDLED_LANGUAGE_IDS)];
+  const known = new Set<string>(BUNDLED_LANGUAGE_IDS);
+  for (const id of languages) {
+    if (!known.has(id)) {
+      throw new Error(
+        `vite-plugin-justif: unknown hyphenation language "${id}". ` +
+          `Bundled languages: ${BUNDLED_LANGUAGE_IDS.join(", ")}.`,
+      );
+    }
+  }
+  const selector = options.selector ?? DEFAULT_SELECTOR;
+  const debug = options.debug ?? false;
+  const inject = options.inject ?? true;
 
   const plugin: Plugin = {
     name: "vite-plugin-justif",
-  };
-
-  if (wantsCore || wantsAuto) {
-    plugin.resolveId = {
+    resolveId: {
       filter: { id: ID_FILTER },
       handler(id: string) {
-        if (wantsCore && id === CORE_MODULE_ID) return RESOLVED_CORE_MODULE_ID;
-        if (wantsAuto && id === AUTO_MODULE_ID) return RESOLVED_AUTO_MODULE_ID;
+        if (id === CORE_MODULE_ID) return RESOLVED_CORE_MODULE_ID;
+        if (id === AUTO_MODULE_ID) return RESOLVED_AUTO_MODULE_ID;
         return null;
       },
-    };
-    plugin.load = {
+    },
+    load: {
       filter: { id: RESOLVED_ID_FILTER },
       handler(id: string) {
         if (id === RESOLVED_CORE_MODULE_ID) {
-          return wantsCore ? generateCoreModule(resolved.languages) : null;
+          return generateCoreModule(languages);
         }
         if (id === RESOLVED_AUTO_MODULE_ID) {
-          return wantsAuto ? generateAutoModule(autoOptions) : null;
+          return generateAutoModule({ languages, selector, debug });
         }
         return null;
       },
-    };
-  }
+    },
+  };
 
-  if (resolved.inject) {
+  if (inject) {
     plugin.transformIndexHtml = {
       // `pre`: the injected script must go through the plugin pipeline so it
       // is treated as an entry and bundled (dev and build alike).
@@ -174,14 +131,6 @@ export function vitePluginJustif(
 
 export default vitePluginJustif;
 
-export {
-  BUNDLED_LANGUAGE_IDS,
-  CORE_MODULE_ID,
-  AUTO_MODULE_ID,
-  DEFAULT_SELECTOR,
-} from "./constants.js";
-export type { JustifLanguage } from "./constants.js";
-export { generateCoreModule, generateAutoModule } from "./virtual.js";
-export { resolveJustifLanguage } from "./lang.js";
-export { bootAuto } from "./runtime/auto.js";
-export type { AutoBootOptions, Hyphenator } from "./runtime/auto.js";
+export { BUNDLED_LANGUAGE_IDS } from "./languages.js";
+export type { JustifLanguage } from "./languages.js";
+export { CORE_MODULE_ID, AUTO_MODULE_ID } from "./virtual.js";
