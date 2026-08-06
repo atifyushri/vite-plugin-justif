@@ -2,7 +2,10 @@ import { defineConfig } from "tsup";
 
 const shared = {
   format: ["esm"] as const,
-  dts: true,
+  // Declarations come from `tsc -p tsconfig.build.json` (the build script):
+  // tsup's dts bundling needs the TypeScript JS API, which the Go-native
+  // typescript@7 no longer ships.
+  dts: false,
   target: "es2020" as const,
   sourcemap: true,
   treeshake: true,
