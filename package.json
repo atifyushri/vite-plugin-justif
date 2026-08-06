@@ -1,0 +1,52 @@
+{
+  "name": "vite-plugin-justif",
+  "version": "0.1.0",
+  "description": "Vite plugin for justif — publication-grade text justification. Auto-enhances your HTML and wires up every bundled hyphenation language for dev and build.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime/auto": {
+      "types": "./dist/runtime/auto.d.ts",
+      "import": "./dist/runtime/auto.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "keywords": [
+    "vite-plugin",
+    "justif",
+    "typography",
+    "justification",
+    "knuth-plass",
+    "microtypography",
+    "line-breaking",
+    "hyphenation"
+  ],
+  "peerDependencies": {
+    "justif": "^0.7.0",
+    "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "justif": "^0.7.1",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^8.2.0",
+    "vitest": "^3.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test"
+  }
+}
