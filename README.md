@@ -31,7 +31,7 @@ import { defineConfig } from "vite";
 import { vitePluginJustif } from "vite-plugin-justif";
 
 export default defineConfig({
-  plugins: [vitePluginJustif()],
+    plugins: [vitePluginJustif()],
 });
 ```
 
@@ -44,16 +44,16 @@ without a pattern, `data-justif` markers, and a `window.justif` escape hatch.
 
 ```ts
 vitePluginJustif({
-  /** Languages to bundle. Also controls bundle size.
-   *  Defaults to all 23 bundled languages. */
-  languages: ["en-us", "de", "fr"],
-  /** Candidate selector for the auto-enhancement
-   *  (default: "p, li, dd, blockquote, figcaption"). */
-  selector: "article p",
-  /** Log a reason for every paragraph kept on native layout. */
-  debug: true,
-  /** Inject the auto entry into every HTML file (default: true). */
-  inject: false,
+    /** Languages to bundle. Also controls bundle size.
+     *  Defaults to all 23 bundled languages. */
+    languages: ["en-us", "de", "fr"],
+    /** Candidate selector for the auto-enhancement
+     *  (default: "p, li, dd, blockquote, figcaption"). */
+    selector: "article p",
+    /** Log a reason for every paragraph kept on native layout. */
+    debug: true,
+    /** Inject the auto entry into every HTML file (default: true). */
+    inject: false,
 });
 ```
 
@@ -90,8 +90,8 @@ element and they apply per group, e.g.
 
 ```css
 :root {
-  --justif-paragraph-layout: 50.5;
-  --justif-inline-alignment: center;
+    --justif-paragraph-layout: 50.5;
+    --justif-inline-alignment: center;
 }
 ```
 
@@ -109,12 +109,12 @@ statically, then declares one static-string `import()` per language:
 import { bootAuto } from "vite-plugin-justif/runtime/auto";
 
 bootAuto({
-  selector: "p, li, dd, blockquote, figcaption",
-  debug: false,
-  loaders: {
-    "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
-    de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
-  },
+    selector: "p, li, dd, blockquote, figcaption",
+    debug: false,
+    loaders: {
+        "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
+        de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
+    },
 });
 ```
 

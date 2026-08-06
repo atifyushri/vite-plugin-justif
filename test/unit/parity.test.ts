@@ -13,10 +13,10 @@ import { findPackageJSON } from "node:module";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
-  BUNDLED_LANGUAGE_IDS,
-  DEFAULT_SELECTOR,
-  hyphenatorExportName,
-  languageModuleId,
+    BUNDLED_LANGUAGE_IDS,
+    DEFAULT_SELECTOR,
+    hyphenatorExportName,
+    languageModuleId,
 } from "../../src/languages.js";
 
 // justif is ESM-only and does not export ./package.json, so neither
@@ -25,29 +25,29 @@ const justifPackageJson = findPackageJSON("justif", import.meta.url)!;
 const justifRoot = dirname(justifPackageJson);
 
 describe("upstream parity with the installed justif", () => {
-  it("BUNDLED_LANGUAGE_IDS matches justif's hyphenate exports", async () => {
-    const pkg = JSON.parse(await readFile(justifPackageJson, "utf8")) as {
-      exports: Record<string, unknown>;
-    };
-    const upstream = Object.keys(pkg.exports)
-      .filter((key) => key.startsWith("./hyphenate/"))
-      .map((key) => key.slice("./hyphenate/".length))
-      // liang is the hyphenation engine, not a language.
-      .filter((id) => id !== "liang")
-      .toSorted();
-    expect(BUNDLED_LANGUAGE_IDS.toSorted()).toEqual(upstream);
-  });
+    it("BUNDLED_LANGUAGE_IDS matches justif's hyphenate exports", async () => {
+        const pkg = JSON.parse(await readFile(justifPackageJson, "utf8")) as {
+            exports: Record<string, unknown>;
+        };
+        const upstream = Object.keys(pkg.exports)
+            .filter((key) => key.startsWith("./hyphenate/"))
+            .map((key) => key.slice("./hyphenate/".length))
+            // liang is the hyphenation engine, not a language.
+            .filter((id) => id !== "liang")
+            .toSorted();
+        expect(BUNDLED_LANGUAGE_IDS.toSorted()).toEqual(upstream);
+    });
 
-  it("every language module has the export hyphenatorExportName predicts", async () => {
-    for (const id of BUNDLED_LANGUAGE_IDS) {
-      const module = (await import(languageModuleId(id))) as Record<string, unknown>;
-      const name = hyphenatorExportName(id);
-      expect(typeof module[name], `${languageModuleId(id)} → ${name}`).toBe("function");
-    }
-  });
+    it("every language module has the export hyphenatorExportName predicts", async () => {
+        for (const id of BUNDLED_LANGUAGE_IDS) {
+            const module = (await import(languageModuleId(id))) as Record<string, unknown>;
+            const name = hyphenatorExportName(id);
+            expect(typeof module[name], `${languageModuleId(id)} → ${name}`).toBe("function");
+        }
+    });
 
-  it("DEFAULT_SELECTOR appears verbatim in justif's drop-in bundle", async () => {
-    const auto = await readFile(join(justifRoot, "dist", "auto.js"), "utf8");
-    expect(auto).toContain(DEFAULT_SELECTOR);
-  });
+    it("DEFAULT_SELECTOR appears verbatim in justif's drop-in bundle", async () => {
+        const auto = await readFile(join(justifRoot, "dist", "auto.js"), "utf8");
+        expect(auto).toContain(DEFAULT_SELECTOR);
+    });
 });

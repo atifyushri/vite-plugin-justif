@@ -24,37 +24,37 @@ export const RESOLVED_CORE_MODULE_ID = "\0" + CORE_MODULE_ID;
 export const RESOLVED_AUTO_MODULE_ID = "\0" + AUTO_MODULE_ID;
 
 export interface AutoModuleOptions {
-  /** Bundled languages the generated auto entry ships (as lazy chunks). */
-  languages: readonly JustifLanguage[];
-  /** Candidate selector for the auto-enhancement scan. */
-  selector: string;
-  /** Log a reason for every paragraph kept on native layout. */
-  debug: boolean;
+    /** Bundled languages the generated auto entry ships (as lazy chunks). */
+    languages: readonly JustifLanguage[];
+    /** Candidate selector for the auto-enhancement scan. */
+    selector: string;
+    /** Log a reason for every paragraph kept on native layout. */
+    debug: boolean;
 }
 
 function languageImports(languages: readonly JustifLanguage[]): string {
-  return languages
-    .map(
-      (id) =>
-        `import { ${hyphenatorExportName(id)} } from ${JSON.stringify(languageModuleId(id))};`,
-    )
-    .join("\n");
+    return languages
+        .map(
+            (id) =>
+                `import { ${hyphenatorExportName(id)} } from ${JSON.stringify(languageModuleId(id))};`,
+        )
+        .join("\n");
 }
 
 function hyphenatorTable(languages: readonly JustifLanguage[]): string {
-  const rows = languages.map((id) => `  ${JSON.stringify(id)}: ${hyphenatorExportName(id)},`);
-  return `{\n${rows.join("\n")}\n}`;
+    const rows = languages.map((id) => `  ${JSON.stringify(id)}: ${hyphenatorExportName(id)},`);
+    return `{\n${rows.join("\n")}\n}`;
 }
 
 function loaderTable(languages: readonly JustifLanguage[]): string {
-  const rows = languages.map((id) => {
-    const name = hyphenatorExportName(id);
-    return (
-      `    ${JSON.stringify(id)}: () => ` +
-      `import(${JSON.stringify(languageModuleId(id))}).then((m) => m.${name}),`
-    );
-  });
-  return `{\n${rows.join("\n")}\n  }`;
+    const rows = languages.map((id) => {
+        const name = hyphenatorExportName(id);
+        return (
+            `    ${JSON.stringify(id)}: () => ` +
+            `import(${JSON.stringify(languageModuleId(id))}).then((m) => m.${name}),`
+        );
+    });
+    return `{\n${rows.join("\n")}\n  }`;
 }
 
 /**
@@ -67,12 +67,12 @@ function loaderTable(languages: readonly JustifLanguage[]): string {
  *   });
  */
 export function generateCoreModule(languages: readonly JustifLanguage[]): string {
-  return [
-    `export * from "justif";`,
-    languageImports(languages),
-    `export const hyphenators = ${hyphenatorTable(languages)};`,
-    "",
-  ].join("\n");
+    return [
+        `export * from "justif";`,
+        languageImports(languages),
+        `export const hyphenators = ${hyphenatorTable(languages)};`,
+        "",
+    ].join("\n");
 }
 
 /**
@@ -88,14 +88,14 @@ export function generateCoreModule(languages: readonly JustifLanguage[]): string
  * without the HTML injection.
  */
 export function generateAutoModule(options: AutoModuleOptions): string {
-  return [
-    `import { bootAuto } from "vite-plugin-justif/runtime/auto";`,
-    "",
-    `bootAuto({`,
-    `  selector: ${JSON.stringify(options.selector)},`,
-    `  debug: ${options.debug},`,
-    `  loaders: ${loaderTable(options.languages)},`,
-    `});`,
-    "",
-  ].join("\n");
+    return [
+        `import { bootAuto } from "vite-plugin-justif/runtime/auto";`,
+        "",
+        `bootAuto({`,
+        `  selector: ${JSON.stringify(options.selector)},`,
+        `  debug: ${options.debug},`,
+        `  loaders: ${loaderTable(options.languages)},`,
+        `});`,
+        "",
+    ].join("\n");
 }

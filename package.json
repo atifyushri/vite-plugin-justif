@@ -1,60 +1,60 @@
 {
-  "name": "vite-plugin-justif",
-  "version": "0.1.0",
-  "description": "Vite plugin for justif — publication-grade text justification. Auto-enhances your HTML and wires up every bundled hyphenation language for dev and build.",
-  "keywords": [
-    "hyphenation",
-    "justif",
-    "justification",
-    "knuth-plass",
-    "line-breaking",
-    "microtypography",
-    "typography",
-    "vite-plugin"
-  ],
-  "license": "MIT",
-  "files": [
-    "dist",
-    "LICENSE"
-  ],
-  "type": "module",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "vite-plugin-justif",
+    "version": "0.1.0",
+    "description": "Vite plugin for justif — publication-grade text justification. Auto-enhances your HTML and wires up every bundled hyphenation language for dev and build.",
+    "keywords": [
+        "hyphenation",
+        "justif",
+        "justification",
+        "knuth-plass",
+        "line-breaking",
+        "microtypography",
+        "typography",
+        "vite-plugin"
+    ],
+    "license": "MIT",
+    "files": [
+        "dist",
+        "LICENSE"
+    ],
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./runtime/auto": {
+            "types": "./dist/runtime/auto.d.ts",
+            "import": "./dist/runtime/auto.js"
+        },
+        "./package.json": "./package.json"
     },
-    "./runtime/auto": {
-      "types": "./dist/runtime/auto.d.ts",
-      "import": "./dist/runtime/auto.js"
+    "scripts": {
+        "build": "tsup && tsc -p tsconfig.build.json",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint",
+        "format": "oxfmt",
+        "format:check": "oxfmt --check",
+        "test": "tsup && tsc -p tsconfig.build.json && vitest run",
+        "test:watch": "vitest",
+        "check": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run",
+        "prepublishOnly": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run"
     },
-    "./package.json": "./package.json"
-  },
-  "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check",
-    "test": "tsup && tsc -p tsconfig.build.json && vitest run",
-    "test:watch": "vitest",
-    "check": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run",
-    "prepublishOnly": "tsc --noEmit && oxlint && oxfmt --check && tsup && tsc -p tsconfig.build.json && vitest run"
-  },
-  "devDependencies": {
-    "@changesets/cli": "^2.31.1",
-    "@types/node": "^26.1.2",
-    "happy-dom": "^20.11.1",
-    "justif": "^0.7.1",
-    "oxfmt": "^0.62.0",
-    "oxlint": "^1.77.0",
-    "tsup": "^8.5.1",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
-  },
-  "peerDependencies": {
-    "justif": "^0.7.0",
-    "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
-  }
+    "devDependencies": {
+        "@changesets/cli": "^2.31.1",
+        "@types/node": "^26.1.2",
+        "happy-dom": "^20.11.1",
+        "justif": "^0.7.1",
+        "oxfmt": "^0.62.0",
+        "oxlint": "^1.77.0",
+        "tsup": "^8.5.1",
+        "typescript": "^7.0.2",
+        "vite": "^8.2.0",
+        "vitest": "^4.1.10"
+    },
+    "peerDependencies": {
+        "justif": "^0.7.0",
+        "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
+    }
 }

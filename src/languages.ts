@@ -13,29 +13,29 @@
 
 /** Every language justif bundles hyphenation patterns for. */
 export const BUNDLED_LANGUAGE_IDS = [
-  "ca",
-  "da",
-  "de",
-  "el",
-  "en-gb",
-  "en-us",
-  "es",
-  "fi",
-  "fr",
-  "hr",
-  "hu",
-  "it",
-  "nb",
-  "nl",
-  "nn",
-  "pl",
-  "pt",
-  "ru",
-  "sk",
-  "sl",
-  "sv",
-  "tr",
-  "uk",
+    "ca",
+    "da",
+    "de",
+    "el",
+    "en-gb",
+    "en-us",
+    "es",
+    "fi",
+    "fr",
+    "hr",
+    "hu",
+    "it",
+    "nb",
+    "nl",
+    "nn",
+    "pl",
+    "pt",
+    "ru",
+    "sk",
+    "sl",
+    "sv",
+    "tr",
+    "uk",
 ] as const;
 
 export type JustifLanguage = (typeof BUNDLED_LANGUAGE_IDS)[number];
@@ -47,14 +47,14 @@ export const DEFAULT_SELECTOR = "p, li, dd, blockquote, figcaption";
  * First subtag is CamelCased; trailing subtags are uppercased in full
  * (the package's own convention: `en-gb` -> `hyphenateEnGB`). */
 export function hyphenatorExportName(id: string): string {
-  const [head, ...tail] = id.split("-");
-  const base = head!.charAt(0).toUpperCase() + head!.slice(1);
-  return "hyphenate" + base + tail.map((part) => part.toUpperCase()).join("");
+    const [head, ...tail] = id.split("-");
+    const base = head!.charAt(0).toUpperCase() + head!.slice(1);
+    return "hyphenate" + base + tail.map((part) => part.toUpperCase()).join("");
 }
 
 /** The package subpath a language module is imported from, e.g. "justif/hyphenate/de". */
 export function languageModuleId(id: string): string {
-  return `justif/hyphenate/${id}`;
+    return `justif/hyphenate/${id}`;
 }
 
 const ALL = new Set<string>(BUNDLED_LANGUAGE_IDS);
@@ -74,21 +74,21 @@ const ALL = new Set<string>(BUNDLED_LANGUAGE_IDS);
  * justification — the same graceful degradation justif's auto performs.
  */
 export function resolveJustifLanguage(
-  lang: string,
-  subset?: ReadonlySet<string>,
+    lang: string,
+    subset?: ReadonlySet<string>,
 ): JustifLanguage | null {
-  const norm = lang.toLowerCase().replace(/_/g, "-");
-  let id: string;
-  if (norm === "") {
-    id = "en-us";
-  } else if (norm === "en-gb") {
-    id = "en-gb";
-  } else if (norm === "en" || norm.startsWith("en-")) {
-    id = "en-us";
-  } else {
-    const primary = norm.split("-")[0]!;
-    id = primary === "no" ? "nb" : primary;
-  }
-  const known = subset ?? ALL;
-  return known.has(id) ? (id as JustifLanguage) : null;
+    const norm = lang.toLowerCase().replace(/_/g, "-");
+    let id: string;
+    if (norm === "") {
+        id = "en-us";
+    } else if (norm === "en-gb") {
+        id = "en-gb";
+    } else if (norm === "en" || norm.startsWith("en-")) {
+        id = "en-us";
+    } else {
+        const primary = norm.split("-")[0]!;
+        id = primary === "no" ? "nb" : primary;
+    }
+    const known = subset ?? ALL;
+    return known.has(id) ? (id as JustifLanguage) : null;
 }
