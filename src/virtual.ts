@@ -13,11 +13,7 @@
  * chunks that load on demand — the same progressive behavior as the CDN
  * script, with every language still shipped and resolvable by the build.
  */
-import {
-  languageModuleId,
-  hyphenatorExportName,
-  type JustifLanguage,
-} from "./languages.js";
+import { languageModuleId, hyphenatorExportName, type JustifLanguage } from "./languages.js";
 
 /** Virtual module exposing the core API plus every selected hyphenator. */
 export const CORE_MODULE_ID = "virtual:justif";
@@ -46,9 +42,7 @@ function languageImports(languages: readonly JustifLanguage[]): string {
 }
 
 function hyphenatorTable(languages: readonly JustifLanguage[]): string {
-  const rows = languages.map(
-    (id) => `  ${JSON.stringify(id)}: ${hyphenatorExportName(id)},`,
-  );
+  const rows = languages.map((id) => `  ${JSON.stringify(id)}: ${hyphenatorExportName(id)},`);
   return `{\n${rows.join("\n")}\n}`;
 }
 
@@ -72,9 +66,7 @@ function loaderTable(languages: readonly JustifLanguage[]): string {
  *     hyphenate: hyphenators.de,
  *   });
  */
-export function generateCoreModule(
-  languages: readonly JustifLanguage[],
-): string {
+export function generateCoreModule(languages: readonly JustifLanguage[]): string {
   return [
     `export * from "justif";`,
     languageImports(languages),

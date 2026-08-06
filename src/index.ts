@@ -18,11 +18,7 @@
  * distribution model) have no meaning under a plain Rolldown/Rollup build.
  */
 import type { HtmlTagDescriptor, Plugin } from "vite";
-import {
-  BUNDLED_LANGUAGE_IDS,
-  DEFAULT_SELECTOR,
-  type JustifLanguage,
-} from "./languages.js";
+import { BUNDLED_LANGUAGE_IDS, DEFAULT_SELECTOR, type JustifLanguage } from "./languages.js";
 import {
   AUTO_MODULE_ID,
   CORE_MODULE_ID,
@@ -67,9 +63,7 @@ export interface JustifVitePluginOptions {
 const ID_FILTER = /^virtual:justif([/?]|$)/;
 const RESOLVED_ID_FILTER = /^\0virtual:justif([/?]|$)/;
 
-export function vitePluginJustif(
-  options: JustifVitePluginOptions = {},
-): Plugin {
+export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin {
   const languages = [...new Set(options.languages ?? BUNDLED_LANGUAGE_IDS)];
   const known = new Set<string>(BUNDLED_LANGUAGE_IDS);
   for (const id of languages) {

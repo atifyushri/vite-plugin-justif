@@ -34,20 +34,15 @@ describe("upstream parity with the installed justif", () => {
       .map((key) => key.slice("./hyphenate/".length))
       // liang is the hyphenation engine, not a language.
       .filter((id) => id !== "liang")
-      .sort();
-    expect([...BUNDLED_LANGUAGE_IDS].sort()).toEqual(upstream);
+      .toSorted();
+    expect(BUNDLED_LANGUAGE_IDS.toSorted()).toEqual(upstream);
   });
 
   it("every language module has the export hyphenatorExportName predicts", async () => {
     for (const id of BUNDLED_LANGUAGE_IDS) {
-      const module = (await import(languageModuleId(id))) as Record<
-        string,
-        unknown
-      >;
+      const module = (await import(languageModuleId(id))) as Record<string, unknown>;
       const name = hyphenatorExportName(id);
-      expect(typeof module[name], `${languageModuleId(id)} → ${name}`).toBe(
-        "function",
-      );
+      expect(typeof module[name], `${languageModuleId(id)} → ${name}`).toBe("function");
     }
   });
 

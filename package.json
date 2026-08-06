@@ -2,13 +2,23 @@
   "name": "vite-plugin-justif",
   "version": "0.1.0",
   "description": "Vite plugin for justif — publication-grade text justification. Auto-enhances your HTML and wires up every bundled hyphenation language for dev and build.",
-  "type": "module",
+  "keywords": [
+    "hyphenation",
+    "justif",
+    "justification",
+    "knuth-plass",
+    "line-breaking",
+    "microtypography",
+    "typography",
+    "vite-plugin"
+  ],
   "license": "MIT",
-  "sideEffects": false,
   "files": [
     "dist",
     "LICENSE"
   ],
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -20,33 +30,28 @@
     },
     "./package.json": "./package.json"
   },
-  "keywords": [
-    "vite-plugin",
-    "justif",
-    "typography",
-    "justification",
-    "knuth-plass",
-    "microtypography",
-    "line-breaking",
-    "hyphenation"
-  ],
-  "peerDependencies": {
-    "justif": "^0.7.0",
-    "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "justif": "^0.7.1",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "vite": "^8.2.0",
     "vitest": "^3.0.0"
   },
-  "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc --noEmit",
-    "test": "npm run build && vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "npm run typecheck && npm test"
+  "peerDependencies": {
+    "justif": "^0.7.0",
+    "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
   }
 }

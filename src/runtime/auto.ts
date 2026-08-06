@@ -93,9 +93,7 @@ declare global {
  * Returns the same handle it assigns to `window.justif`, or `undefined`
  * outside a browser.
  */
-export function bootAuto(
-  options: AutoBootOptions = {},
-): JustifAutoHandle | undefined {
+export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | undefined {
   if (typeof document === "undefined") return undefined;
 
   const loaders = options.loaders ?? {};
@@ -103,9 +101,7 @@ export function bootAuto(
   const selector = options.selector ?? DEFAULT_SELECTOR;
   const onSkip: JustifyOptions["onSkip"] =
     options.onSkip ??
-    (options.debug
-      ? (p, reason) => console.info("justif: skipped", p, "—", reason)
-      : undefined);
+    (options.debug ? (p, reason) => console.info("justif: skipped", p, "—", reason) : undefined);
 
   /**
    * Group the current candidates. Paragraphs carrying `data-justif` are
@@ -122,7 +118,7 @@ export function bootAuto(
       if (align !== "justify" && align !== "justify-all") continue;
       const lang = el.closest("[lang]")?.getAttribute("lang") ?? "";
       const id = resolveJustifLanguage(lang, available);
-      const { options, key } = parseCssConfiguration((property: CssProperty) =>
+      const { options: layout, key } = parseCssConfiguration((property: CssProperty) =>
         style.getPropertyValue(property),
       );
       // Same separators as the drop-in: U+0000 between the halves, U+0001
@@ -131,7 +127,7 @@ export function bootAuto(
       const groupKey = `${id ?? "\u0001"}\u0000${key}`;
       const group = groups.get(groupKey);
       if (group === undefined) {
-        groups.set(groupKey, { id, options, els: [el] });
+        groups.set(groupKey, { id, options: layout, els: [el] });
       } else {
         group.els.push(el);
       }
@@ -151,11 +147,8 @@ export function bootAuto(
   const start = (controllers: JustifyController[]): Promise<void> =>
     Promise.allSettled(
       collectGroups().map(async (group) => {
-        const hyphenate =
-          group.id === null ? undefined : await loaders[group.id]?.();
-        controllers.push(
-          justify(group.els, { ...group.options, hyphenate, onSkip }),
-        );
+        const hyphenate = group.id === null ? undefined : await loaders[group.id]?.();
+        controllers.push(justify(group.els, { ...group.options, hyphenate, onSkip }));
       }),
     ).then(() => undefined);
 

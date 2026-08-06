@@ -8,15 +8,7 @@
  * — the same resolution a consumer's app performs.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  mkdtemp,
-  rm,
-  mkdir,
-  symlink,
-  writeFile,
-  readdir,
-  readFile,
-} from "node:fs/promises";
+import { mkdtemp, rm, mkdir, symlink, writeFile, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,9 +68,7 @@ describe("vite build", () => {
       },
     });
 
-    const jsFiles = (await readdir(join(outDirRoot, "assets"))).filter((f) =>
-      f.endsWith(".js"),
-    );
+    const jsFiles = (await readdir(join(outDirRoot, "assets"))).filter((f) => f.endsWith(".js"));
     expect(jsFiles.length).toBeGreaterThan(0);
 
     // The injected auto script must be bundled into a real asset, and the
@@ -137,10 +127,10 @@ describe("vite build", () => {
 
     // Entry names are hashed/merged in Vite 8; assert over all JS output.
     let code = "";
-    for (const f of (await readdir(join(root, "dist", "assets"))).filter((f) =>
+    for (const name of (await readdir(join(root, "dist", "assets"))).filter((f) =>
       f.endsWith(".js"),
     )) {
-      code += await readFile(join(root, "dist", "assets", f), "utf8");
+      code += await readFile(join(root, "dist", "assets", name), "utf8");
     }
     expect(code).toContain("hyphenateEnUS");
     expect(code).toContain("hyphenateDe");
@@ -149,37 +139,33 @@ describe("vite build", () => {
 });
 
 describe("vite dev server", () => {
-  it(
-    "resolves and transforms both virtual modules",
-    async () => {
-      const { createServer } = await import("vite");
-      const server = await createServer({
-        configFile: false,
-        logLevel: "silent",
-        root: fixture,
-        plugins: [vitePluginJustif({ languages: ["en-us", "de"] })],
-        server: { middlewareMode: true },
-        optimizeDeps: { noDiscovery: true },
-      });
-      try {
-        const core = await server.transformRequest("virtual:justif");
-        expect(core?.code).toContain("hyphenators");
-        expect(core?.code).toContain("hyphenateEnUS");
-        expect(core?.code).toContain("hyphenateDe");
-        expect(core?.code).not.toContain("hyphenateCa");
+  it("resolves and transforms both virtual modules", async () => {
+    const { createServer } = await import("vite");
+    const server = await createServer({
+      configFile: false,
+      logLevel: "silent",
+      root: fixture,
+      plugins: [vitePluginJustif({ languages: ["en-us", "de"] })],
+      server: { middlewareMode: true },
+      optimizeDeps: { noDiscovery: true },
+    });
+    try {
+      const core = await server.transformRequest("virtual:justif");
+      expect(core?.code).toContain("hyphenators");
+      expect(core?.code).toContain("hyphenateEnUS");
+      expect(core?.code).toContain("hyphenateDe");
+      expect(core?.code).not.toContain("hyphenateCa");
 
-        const auto = await server.transformRequest("virtual:justif/auto");
-        expect(auto?.code).toContain("bootAuto");
-        expect(auto?.code).toContain("loaders:");
-        // Dev rewrites bare specifiers to /@fs/... paths; assert the parts.
-        expect(auto?.code).toContain("m.hyphenateEnUS");
-        expect(auto?.code).toContain("hyphenate/en-us.js");
-        expect(auto?.code).toContain("hyphenate/de.js");
-        expect(auto?.code).not.toContain("hyphenateCa");
-      } finally {
-        await server.close();
-      }
-    },
-    30_000,
-  );
+      const auto = await server.transformRequest("virtual:justif/auto");
+      expect(auto?.code).toContain("bootAuto");
+      expect(auto?.code).toContain("loaders:");
+      // Dev rewrites bare specifiers to /@fs/... paths; assert the parts.
+      expect(auto?.code).toContain("m.hyphenateEnUS");
+      expect(auto?.code).toContain("hyphenate/en-us.js");
+      expect(auto?.code).toContain("hyphenate/de.js");
+      expect(auto?.code).not.toContain("hyphenateCa");
+    } finally {
+      await server.close();
+    }
+  }, 30_000);
 });

@@ -60,10 +60,7 @@ function parseFraction(raw: string): number | undefined {
   return value;
 }
 
-type ParsedOne =
-  | { options: LayoutOptions; keyPart: string }
-  | "invalid"
-  | "default";
+type ParsedOne = { options: LayoutOptions; keyPart: string } | "invalid" | "default";
 
 function parseOne(property: CssProperty, raw: string): ParsedOne {
   if (raw === "none") {
@@ -84,11 +81,7 @@ function parseOne(property: CssProperty, raw: string): ParsedOne {
   }
 
   if (property === "--justif-hanging-punctuation") {
-    if (
-      raw === "line-end-only" ||
-      raw === "first-line-and-line-ends" ||
-      raw === "all-line-edges"
-    ) {
+    if (raw === "line-end-only" || raw === "first-line-and-line-ends" || raw === "all-line-edges") {
       return raw === layoutDefaults.hangingPunctuation
         ? "default"
         : { options: { hangingPunctuation: raw }, keyPart: raw };
@@ -122,10 +115,7 @@ function parseOne(property: CssProperty, raw: string): ParsedOne {
     }
     case "--justif-last-line-min-width":
     case "--justif-last-line-fit": {
-      const key =
-        property === "--justif-last-line-min-width"
-          ? "lastLineMinWidth"
-          : "lastLineFit";
+      const key = property === "--justif-last-line-min-width" ? "lastLineMinWidth" : "lastLineFit";
       const clamped = Math.min(1, fraction);
       if (clamped === layoutDefaults[key]) return "default";
       return { options: { [key]: clamped }, keyPart: serialize(clamped) };

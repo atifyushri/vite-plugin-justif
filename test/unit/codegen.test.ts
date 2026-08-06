@@ -13,10 +13,7 @@ import {
 import { vitePluginJustif } from "../../src/index.js";
 
 /** Invoke the plugin's `load` hook the way Vite would for a resolved id. */
-function loadVirtual(
-  plugin: ReturnType<typeof vitePluginJustif>,
-  id: string,
-): string | null {
+function loadVirtual(plugin: ReturnType<typeof vitePluginJustif>, id: string): string | null {
   const hook = plugin.load;
   if (hook === undefined || typeof hook === "function") {
     throw new Error("expected an object load hook");
@@ -60,12 +57,8 @@ describe("generateCoreModule", () => {
   it("re-exports justif and builds a hyphenators table", () => {
     const code = generateCoreModule(["en-us", "de"]);
     expect(code).toContain(`export * from "justif";`);
-    expect(code).toContain(
-      `import { hyphenateEnUS } from "justif/hyphenate/en-us";`,
-    );
-    expect(code).toContain(
-      `import { hyphenateDe } from "justif/hyphenate/de";`,
-    );
+    expect(code).toContain(`import { hyphenateEnUS } from "justif/hyphenate/en-us";`);
+    expect(code).toContain(`import { hyphenateDe } from "justif/hyphenate/de";`);
     expect(code).toContain(`"en-us": hyphenateEnUS`);
     expect(code).toContain(`"de": hyphenateDe`);
   });
@@ -85,16 +78,12 @@ describe("generateAutoModule", () => {
       selector: "article p",
       debug: true,
     });
-    expect(code).toContain(
-      `import { bootAuto } from "vite-plugin-justif/runtime/auto";`,
-    );
+    expect(code).toContain(`import { bootAuto } from "vite-plugin-justif/runtime/auto";`);
     expect(code).toContain("loaders: {");
     expect(code).toContain(
       `"en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS)`,
     );
-    expect(code).toContain(
-      `"ca": () => import("justif/hyphenate/ca").then((m) => m.hyphenateCa)`,
-    );
+    expect(code).toContain(`"ca": () => import("justif/hyphenate/ca").then((m) => m.hyphenateCa)`);
     expect(code).toContain(`selector: "article p"`);
     expect(code).toContain(`debug: true`);
     // Every specifier is a string literal a bundler can code-split; nothing

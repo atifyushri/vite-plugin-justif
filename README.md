@@ -113,7 +113,7 @@ import { bootAuto } from "vite-plugin-justif/runtime/auto";
 
 const loaders = {
   "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
-  "de":     () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
+  de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
 };
 
 bootAuto({
