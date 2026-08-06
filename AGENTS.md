@@ -19,7 +19,8 @@ parity tests); consumers need only `engines` (Node >= 20.19, or Bun/Deno).
 - `bun test` is NOT the test runner — use `bun run test` (vitest)
 - `bunx vitest run test/unit` — fast unit-only loop, no build needed
 - `bunx changeset` — record a release note; CI's release workflow versions
-  and publishes via the changesets action (needs the `NPM_TOKEN` secret)
+  and publishes via the changesets action (npm trusted publishing / OIDC —
+  no token secret; configured on npmjs.com for release.yml)
 
 ## Architecture
 
