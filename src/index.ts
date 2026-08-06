@@ -18,7 +18,7 @@
  * distribution model) have no meaning under a plain Rolldown/Rollup build.
  */
 import type { HtmlTagDescriptor, Plugin } from "vite";
-import { CLOAK_ATTRIBUTE, cloakCss } from "./cloak.js";
+import { CLOAK_ATTRIBUTE, CLOAK_REVEAL_TIMEOUT_MS, cloakCss } from "./cloak.js";
 import { BUNDLED_LANGUAGE_IDS, DEFAULT_SELECTOR, type JustifLanguage } from "./languages.js";
 import {
     AUTO_MODULE_ID,
@@ -61,11 +61,27 @@ export interface JustifVitePluginOptions {
      * the flash of natively-justified text before enhancement. Defaults to
      * `false`. Injects a pre-paint style and a `data-justif-cloak` attribute
      * on `<html>`; the runtime removes the attribute once layout has settled,
-     * or after 1.5s regardless, so content is never trapped. With
-     * `inject: false`, write `<html data-justif-cloak>` in your HTML source
-     * instead — the runtime still reveals.
+     * or after the fallback timeout regardless, so content is never trapped.
+     * Pass an object to tune both. With `inject: false`, write
+     * `<html data-justif-cloak>` in your HTML source instead — the runtime
+     * still reveals.
      */
-    cloak?: boolean;
+    cloak?: boolean | JustifCloakOptions;
+}
+
+export interface JustifCloakOptions {
+    /**
+     * Reveal after this many milliseconds even if enhancement has not
+     * settled (a hung chunk request must never trap content). Defaults to
+     * 1500. `false` disables the fallback: the page reveals only on booted.
+     */
+    timeout?: number | false;
+    /**
+     * Inject the default hiding rule (`visibility: hidden` on candidates).
+     * Set `false` to own the cloak's look entirely with your own CSS keyed
+     * on `html[data-justif-cloak]`; the attribute mechanics stay.
+     */
+    style?: boolean;
 }
 
 /** `resolveId`/`load` filters: only our two virtual ids (with the null-byte
@@ -88,7 +104,15 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
     const selector = options.selector ?? DEFAULT_SELECTOR;
     const debug = options.debug ?? false;
     const inject = options.inject ?? true;
-    const cloak = options.cloak ?? false;
+    const rawCloak = options.cloak ?? false;
+    const cloak =
+        rawCloak === false
+            ? false
+            : {
+                  timeout:
+                      (rawCloak === true ? undefined : rawCloak.timeout) ?? CLOAK_REVEAL_TIMEOUT_MS,
+                  style: (rawCloak === true ? undefined : rawCloak.style) ?? true,
+              };
 
     const plugin: Plugin = {
         name: "vite-plugin-justif",
@@ -107,7 +131,14 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
                     return generateCoreModule(languages);
                 }
                 if (id === RESOLVED_AUTO_MODULE_ID) {
-                    return generateAutoModule({ languages, selector, debug });
+                    return generateAutoModule({
+                        languages,
+                        selector,
+                        debug,
+                        // Meaningful even when this config never cloaks: the
+                        // attribute may be hand-written under a strict CSP.
+                        cloakTimeout: cloak === false ? CLOAK_REVEAL_TIMEOUT_MS : cloak.timeout,
+                    });
                 }
                 return null;
             },
@@ -121,22 +152,22 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
             order: "pre",
             handler(): HtmlTagDescriptor[] {
                 const tags: HtmlTagDescriptor[] = [];
-                if (cloak) {
+                if (cloak !== false) {
                     // Style plus a synchronous (non-module) attribute setter:
                     // both apply before first paint, so cloaked candidates
                     // are never painted natively. The runtime reveals.
-                    tags.push(
-                        {
+                    if (cloak.style) {
+                        tags.push({
                             tag: "style",
                             children: cloakCss(selector),
                             injectTo: "head",
-                        },
-                        {
-                            tag: "script",
-                            children: `document.documentElement.setAttribute(${JSON.stringify(CLOAK_ATTRIBUTE)}, "");`,
-                            injectTo: "head",
-                        },
-                    );
+                        });
+                    }
+                    tags.push({
+                        tag: "script",
+                        children: `document.documentElement.setAttribute(${JSON.stringify(CLOAK_ATTRIBUTE)}, "");`,
+                        injectTo: "head",
+                    });
                 }
                 tags.push({
                     tag: "script",

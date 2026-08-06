@@ -30,6 +30,8 @@ export interface AutoModuleOptions {
     selector: string;
     /** Log a reason for every paragraph kept on native layout. */
     debug: boolean;
+    /** Cloak fallback reveal in ms, or `false` for reveal-on-booted only. */
+    cloakTimeout: number | false;
 }
 
 function languageImports(languages: readonly JustifLanguage[]): string {
@@ -94,6 +96,7 @@ export function generateAutoModule(options: AutoModuleOptions): string {
         `bootAuto({`,
         `  selector: ${JSON.stringify(options.selector)},`,
         `  debug: ${options.debug},`,
+        `  cloakTimeout: ${JSON.stringify(options.cloakTimeout)},`,
         `  loaders: ${loaderTable(options.languages)},`,
         `});`,
         "",

@@ -58,6 +58,13 @@ export interface AutoBootOptions {
     debug?: boolean;
     /** Called per declined paragraph; the drop-in's `onSkip` equivalent. */
     onSkip?: JustifyOptions["onSkip"];
+    /**
+     * When the page is cloaked (`data-justif-cloak` on `<html>`), reveal
+     * after this many milliseconds even if enhancement has not settled.
+     * Defaults to 1500. `false` disables the fallback — reveal on booted
+     * only. Ignored on uncloaked pages.
+     */
+    cloakTimeout?: number | false;
 }
 
 /** What `bootAuto` returns and exposes at `window.justif`. */
@@ -171,9 +178,10 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
     // once layout settled — or after the timeout regardless, so a hung chunk
     // request can never trap content.
     if (document.documentElement.hasAttribute(CLOAK_ATTRIBUTE)) {
-        const fallback = setTimeout(revealCloak, CLOAK_REVEAL_TIMEOUT_MS);
+        const timeout = options.cloakTimeout ?? CLOAK_REVEAL_TIMEOUT_MS;
+        const fallback = timeout === false ? undefined : setTimeout(revealCloak, timeout);
         void booted.then(() => {
-            clearTimeout(fallback);
+            if (fallback !== undefined) clearTimeout(fallback);
             revealCloak();
         });
     }

@@ -190,6 +190,28 @@ describe("bootAuto", () => {
         }
     });
 
+    it("cloakTimeout: false disables the fallback — reveal on booted only", async () => {
+        vi.useFakeTimers();
+        try {
+            document.documentElement.setAttribute("data-justif-cloak", "");
+            addParagraph("A paragraph.");
+            let release!: (h: undefined) => void;
+            const gate = new Promise<undefined>((resolve) => (release = resolve));
+            const handle = bootAuto({
+                cloakTimeout: false,
+                loaders: { "en-us": () => gate },
+            })!;
+            await vi.advanceTimersByTimeAsync(60_000);
+            expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(true);
+            release(undefined);
+            await handle.booted;
+            await Promise.resolve();
+            expect(document.documentElement.hasAttribute("data-justif-cloak")).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("leaves an uncloaked page alone", async () => {
         addParagraph("A paragraph.");
         const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;

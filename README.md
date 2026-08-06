@@ -80,8 +80,18 @@ shows native justification for an instant before justif retypesets. `cloak:
 true` fixes this: candidates are hidden by a pre-paint style plus a
 `data-justif-cloak` attribute on `<html>`, and the runtime removes the
 attribute once layout settles (or after 1.5s, whichever comes first, so
-content is never trapped). Your CSS can key transitions off the attribute for
-a fade-in:
+content is never trapped). Both knobs take an object form:
+
+```ts
+cloak: {
+    /** Fallback reveal in ms (default: 1500); false = reveal on booted only. */
+    timeout: 4000,
+    /** Skip the default visibility rule and bring your own cloak CSS. */
+    style: false,
+}
+```
+
+Your CSS can key transitions off the attribute for a fade-in:
 
 ```css
 article p {

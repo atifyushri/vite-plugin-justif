@@ -77,7 +77,9 @@ describe("generateAutoModule", () => {
             languages: ["en-us", "ca"],
             selector: "article p",
             debug: true,
+            cloakTimeout: 1500,
         });
+        expect(code).toContain("cloakTimeout: 1500");
         expect(code).toContain(`import { bootAuto } from "vite-plugin-justif/runtime/auto";`);
         expect(code).toContain("loaders: {");
         expect(code).toContain(
@@ -98,9 +100,11 @@ describe("generateAutoModule", () => {
             languages: ["en-us"],
             selector: 'p[data-x="y"]',
             debug: false,
+            cloakTimeout: false,
         });
         expect(code).toContain('selector: "p[data-x=\\"y\\"]"');
         expect(code).toContain("debug: false");
+        expect(code).toContain("cloakTimeout: false");
     });
 });
 
@@ -173,5 +177,20 @@ describe("vitePluginJustif cloak injection", () => {
         expect(setter!.tag).toBe("script");
         expect(setter!.children).toContain(`setAttribute("data-justif-cloak", "")`);
         expect(entry!.children).toContain("virtual:justif/auto");
+    });
+
+    it("cloak style: false keeps the attribute mechanics, skips the rule", () => {
+        const tags = injectedTags(vitePluginJustif({ cloak: { style: false } }));
+        expect(tags).toHaveLength(2);
+        expect(tags[0]!.tag).toBe("script");
+        expect(tags[0]!.children).toContain("data-justif-cloak");
+        expect(tags[1]!.children).toContain("virtual:justif/auto");
+    });
+
+    it("cloak timeout flows into the generated auto module", () => {
+        const plugin = vitePluginJustif({ cloak: { timeout: 4000 } });
+        expect(loadVirtual(plugin, RESOLVED_AUTO_MODULE_ID)).toContain("cloakTimeout: 4000");
+        const noFallback = vitePluginJustif({ cloak: { timeout: false } });
+        expect(loadVirtual(noFallback, RESOLVED_AUTO_MODULE_ID)).toContain("cloakTimeout: false");
     });
 });
