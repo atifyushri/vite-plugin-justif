@@ -35,7 +35,7 @@ export default defineConfig({
 });
 ```
 
-That's it. Every paragraph matches justif's stock candidate selector
+That's it. Every paragraph matching justif's stock candidate selector
 (`p, li, dd, blockquote, figcaption`) with `text-align: justify` is enhanced:
 lazy hyphenation in the paragraph's language, spacing fallback for languages
 without a pattern, `data-justif` markers, and a `window.justif` escape hatch.
@@ -47,22 +47,19 @@ vitePluginJustif({
   /** Languages to bundle. Also controls bundle size.
    *  Defaults to all 23 bundled languages. */
   languages: ["en-us", "de", "fr"],
+  /** Candidate selector for the auto-enhancement
+   *  (default: "p, li, dd, blockquote, figcaption"). */
+  selector: "article p",
+  /** Log a reason for every paragraph kept on native layout. */
+  debug: true,
   /** Inject the auto entry into every HTML file (default: true). */
-  inject: {
-    /** Candidate selector (default: "p, li, dd, blockquote, figcaption"). */
-    selector: "article p",
-    /** Log a reason for every paragraph kept on native layout. */
-    debug: true,
-  },
-  /** Register virtual:justif (default: true). */
-  coreModule: true,
-  /** Register virtual:justif/auto (default: true). */
-  autoModule: true,
+  inject: false,
 });
 ```
 
 Set `inject: false` when a strict Content-Security-Policy blocks inline
-scripts — then import `virtual:justif/auto` from your own entry.
+scripts — then import `virtual:justif/auto` from your own entry. `selector`
+and `debug` are baked into the generated module, so they apply either way.
 
 ```ts
 import "virtual:justif/auto";
@@ -70,19 +67,19 @@ import "virtual:justif/auto";
 
 ### Runtime API
 
-`bootAuto` is exported as `vite-plugin-justif/runtime/auto` and exposed on
-`window.justif` by the injected entry:
+`bootAuto` is exported as `vite-plugin-justif/runtime/auto`. It returns a
+`JustifAutoHandle` — the same object it exposes on `window.justif`:
 
 ```ts
-import type { Hyphenator } from "vite-plugin-justif/runtime/auto";
+import type { Hyphenator, JustifAutoHandle } from "vite-plugin-justif/runtime/auto";
 ```
 
-- `window.justif.justify / unjustify` — the core API.
-- `window.justif.controllers` — the active [JustifyController][]s.
-- `window.justif.booted` — resolves once layout has converged for every group.
-- `window.justif.reconfigure()` — re-reads `--justif-*` configuration and
-  rebuilds controllers. (There is no style watcher; call it when config
-  changes.)
+- `justify` / `unjustify` — the core API.
+- `controllers` — the active [JustifyController][]s, rebuilt in place across
+  `reconfigure()` so held references stay live.
+- `booted` — resolves once layout has converged for every group.
+- `reconfigure()` — re-reads `--justif-*` configuration and rebuilds
+  controllers. (There is no style watcher; call it when config changes.)
 
 [JustifyController]: https://github.com/Lyall/justif
 
@@ -101,7 +98,7 @@ element and they apply per group, e.g.
 See the [justif README](https://github.com/Lyall/justif) for the available
 properties, keywords, and measurement semantics.
 
-## How it works
+## How It Works
 
 `resolveId`/`load` hook filters answer for `virtual:justif` and
 `virtual:justif/auto` only, so the plugin never intercepts other modules.
@@ -111,25 +108,23 @@ statically, then declares one static-string `import()` per language:
 ```js
 import { bootAuto } from "vite-plugin-justif/runtime/auto";
 
-const loaders = {
-  "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
-  de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
-};
-
 bootAuto({
   selector: "p, li, dd, blockquote, figcaption",
-  languageIds: ["en-us", "de"],
-  loadHyphenator: (id) => loaders[id]?.(),
+  debug: false,
+  loaders: {
+    "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
+    de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
+  },
 });
 ```
 
 Vite treats every specifier as a static import it can code-split, so the
-initial bundle stays small and each language loads on demand. The returned
-hyphenator (or `undefined`, for languages without a pattern) maps back to the
-[`hyphenators`](https://github.com/Lyall/justif) map that `justif`'s own auto
+initial bundle stays small and each language loads on demand — concurrently
+per language group. The resolved hyphenator (or `undefined`, for languages
+without a pattern) gives that group the same hyphenation justif's own auto
 loader would have built at runtime.
 
-## Supported languages
+## Supported Languages
 
 `ca, da, de, el, en-gb, en-us, es, fi, fr, hr, hu, it, nb, nl, nn, pl, pt,
 ru, sk, sl, sv, tr, uk` (`en` resolves to `en-us`, `no` to `nb`).
