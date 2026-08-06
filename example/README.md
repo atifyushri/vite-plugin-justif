@@ -2,7 +2,9 @@
 
 A minimal Vite app showing `vite-plugin-justif` doing its job: justified,
 hyphenated prose in English, German, and French, each language arriving as its
-own lazy chunk.
+own lazy chunk. Deployed automatically to
+[atifyushri.github.io/vite-plugin-justif](https://atifyushri.github.io/vite-plugin-justif/)
+by the Pages workflow on every push to `main`.
 
 ## Run It
 

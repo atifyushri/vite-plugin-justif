@@ -1,0 +1,38 @@
+name: Deploy Example to Pages
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+            # The example imports the plugin from ../dist, so build the root first.
+            - run: bun install --frozen-lockfile
+            - run: bun run build
+            - run: bun install --frozen-lockfile && bun run build
+              working-directory: example
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: example/dist
+            - uses: actions/deploy-pages@v4
+              id: deployment

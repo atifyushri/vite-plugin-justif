@@ -9,6 +9,9 @@ import { defineConfig } from "vite";
 import { vitePluginJustif } from "../dist/index.js";
 
 export default defineConfig({
+    // Relative asset paths, so the build works at any mount point —
+    // locally via `vite preview` and on GitHub Pages under /vite-plugin-justif/.
+    base: "./",
     plugins: [
         // The whole setup. `languages` doubles as bundle-size control:
         // only these three pattern files ship, each as its own lazy chunk.
