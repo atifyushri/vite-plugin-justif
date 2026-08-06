@@ -17,6 +17,9 @@ solves both problems:
 
 Requires Vite `^6.3.0 || ^7.0.0 || ^8.0.0` and `justif` as a peer dependency.
 
+A runnable demo lives in [`example/`](example/README.md) — justified,
+hyphenated prose in three languages, each shipping as its own lazy chunk.
+
 ## Install
 
 ```sh

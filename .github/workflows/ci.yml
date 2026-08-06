@@ -23,3 +23,6 @@ jobs:
             - run: bun install --frozen-lockfile
             # typecheck, lint, format check, build, tests
             - run: bun run check
+            # the example app must build against the fresh dist
+            - run: bun install --frozen-lockfile && bun run build
+              working-directory: example

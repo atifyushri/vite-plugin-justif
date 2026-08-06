@@ -38,6 +38,11 @@ inject }`; both virtual modules are always registered (unimported virtual
 - `src/runtime/auto.ts` — browser bootstrap (`bootAuto`), published as
   `vite-plugin-justif/runtime/auto` and deliberately NOT re-exported from the
   main entry (keeps justif's browser engine out of `vite.config.ts` in Node).
+- `example/` — standalone demo app; imports the plugin from `../dist` (build
+  the root first) with a `runtime/auto` alias in its vite config. Do NOT link
+  it to the root via bun `file:`/`link:`/workspace protocols — bun resolves
+  those against the global link registry or recurses into the repo's own
+  `example/`, creating an infinitely nested `node_modules`.
 
 ## Invariants
 

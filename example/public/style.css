@@ -1,0 +1,109 @@
+/* A quiet, paper-like reading page: the justified text is the design. */
+
+:root {
+    --paper: #faf7f2;
+    --ink: #211d16;
+    --ink-soft: #6d6558;
+    --accent: #8c2f1b;
+    --rule: #e2dbcf;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --paper: #171410;
+        --ink: #ddd5c7;
+        --ink-soft: #938a7a;
+        --accent: #d07a5e;
+        --rule: #2e2a23;
+    }
+}
+
+* {
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.1875rem);
+    line-height: 1.65;
+}
+
+main {
+    max-width: 38rem;
+    margin: 0 auto;
+    padding: clamp(3rem, 8vh, 6rem) 1.5rem 4rem;
+}
+
+header {
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2.4rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.subtitle {
+    margin-top: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 0.95em;
+    font-style: italic;
+}
+
+h2 {
+    margin: 2.25rem 0 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* The point of the demo: candidates justify, justif takes them from there. */
+article p,
+blockquote p {
+    text-align: justify;
+}
+
+article > p + p {
+    margin-top: 1em;
+}
+
+blockquote {
+    margin: 2.5rem 0 0;
+    padding: 0 1.25rem;
+    border-inline-start: 2px solid var(--rule);
+    font-style: italic;
+}
+
+blockquote footer {
+    margin-top: 0.5em;
+    font-style: normal;
+    font-size: 0.85em;
+    color: var(--ink-soft);
+    text-align: right;
+}
+
+a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.85em;
+}
+
+.colophon {
+    margin-top: 3.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8em;
+    color: var(--ink-soft);
+}

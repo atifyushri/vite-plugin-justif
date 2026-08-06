@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>vite-plugin-justif</title>
+        <link rel="stylesheet" href="/style.css" />
+        <!-- No script tag: the plugin injects virtual:justif/auto here. -->
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Set&nbsp;Justified</h1>
+                <p class="subtitle">
+                    Every paragraph on this page is laid out by
+                    <a href="https://github.com/Lyall/justif">justif</a>, bundled by
+                    <strong>vite-plugin-justif</strong> — no CDN script, one plugin line.
+                </p>
+            </header>
+
+            <article>
+                <p>
+                    Good justification is more than stretching spaces until both margins align. A
+                    paragraph reads best when its lines break together, as a family: hyphenation
+                    carries long words across lines, punctuation hangs quietly into the margin, and
+                    no single line is left to absorb the damage of a stubborn word above it.
+                    Browsers decide one line at a time; the Knuth–Plass algorithm running here
+                    considers the whole paragraph at once.
+                </p>
+                <p>
+                    This page ships three hyphenation languages. Each lives in its own chunk and
+                    loads only if the page actually contains that language — open the network tab
+                    and you will find the English, German, and French patterns arriving separately,
+                    on demand.
+                </p>
+
+                <section lang="de">
+                    <h2>Deutsch</h2>
+                    <p>
+                        Die deutsche Sprache ist für den Blocksatz eine besondere Herausforderung:
+                        Zusammensetzungen wie Donaudampfschifffahrtsgesellschaft oder
+                        Geschwindigkeitsbegrenzung sprengen ohne Silbentrennung jede Zeile. Mit den
+                        richtigen Trennmustern fügen sich selbst die längsten Wörter unauffällig in
+                        den Absatz ein.
+                    </p>
+                </section>
+
+                <section lang="fr">
+                    <h2>Français</h2>
+                    <p>
+                        La typographie française a ses propres exigences — espaces fines devant la
+                        ponctuation haute, césures respectueuses de l’étymologie. Le paragraphe que
+                        vous lisez est coupé selon les motifs français, chargés uniquement parce que
+                        cette section déclare <code>lang="fr"</code>.
+                    </p>
+                </section>
+
+                <blockquote>
+                    <p>
+                        Typography is the craft of endowing human language with a durable visual
+                        form.
+                    </p>
+                    <footer>
+                        — Robert Bringhurst, <cite>The Elements of Typographic Style</cite>
+                    </footer>
+                </blockquote>
+            </article>
+
+            <footer class="colophon">
+                <p>
+                    Escape hatch: <code>window.justif</code> is live in your console — try
+                    <code>justif.controllers</code> or <code>justif.reconfigure()</code>.
+                </p>
+            </footer>
+        </main>
+    </body>
+</html>
