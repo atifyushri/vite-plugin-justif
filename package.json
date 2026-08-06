@@ -12,7 +12,14 @@
         "typography",
         "vite-plugin"
     ],
+    "homepage": "https://github.com/atifyushri/vite-plugin-justif#readme",
+    "bugs": "https://github.com/atifyushri/vite-plugin-justif/issues",
     "license": "MIT",
+    "author": "Atif Yushri",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/atifyushri/vite-plugin-justif.git"
+    },
     "files": [
         "dist",
         "LICENSE"
@@ -56,5 +63,10 @@
     "peerDependencies": {
         "justif": "^0.7.0",
         "vite": "^6.3.0 || ^7.0.0 || ^8.0.0"
+    },
+    "engines": {
+        "bun": ">=1.2.0",
+        "deno": ">=2.0.0",
+        "node": ">=20.19.0"
     }
 }

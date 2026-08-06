@@ -5,11 +5,21 @@ without its CDN script. Unpublished; breaking changes are currently fine.
 
 ## Commands
 
-- `npm run typecheck` — `tsc --noEmit` (strict, `noUncheckedIndexedAccess`)
-- `npm run lint` — oxlint (`.oxlintrc.json`; correctness=error, suspicious=warn)
-- `npm run format` / `npm run format:check` — oxfmt (stock config)
-- `npm test` — builds with tsup, then runs all vitest suites (unit + integration)
-- `npx vitest run test/unit` — fast unit-only loop, no build needed
+bun is the package manager (`bun.lock`); scripts call binaries directly, so
+any runner works. Development needs Node >= 22.14 (`findPackageJSON` in the
+parity tests); consumers need only `engines` (Node >= 20.19, or Bun/Deno).
+
+- `bun run check` — the full gate: typecheck, lint, format check, build, tests
+- `bun run typecheck` — `tsc --noEmit` (TS 7 Go-native; strict,
+  `noUncheckedIndexedAccess`)
+- `bun run lint` — oxlint (`.oxlintrc.json`; correctness=error, suspicious=warn)
+- `bun run format` / `format:check` — oxfmt (4-space indent; oxfmt owns it)
+- `bun run build` — tsup emits JS; `tsc -p tsconfig.build.json` emits d.ts
+  (tsup's dts bundling needs the TypeScript JS API, which TS 7 removed)
+- `bun test` is NOT the test runner — use `bun run test` (vitest)
+- `bunx vitest run test/unit` — fast unit-only loop, no build needed
+- `bunx changeset` — record a release note; CI's release workflow versions
+  and publishes via the changesets action (needs the `NPM_TOKEN` secret)
 
 ## Architecture
 
