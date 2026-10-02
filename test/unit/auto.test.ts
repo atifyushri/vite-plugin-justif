@@ -18,10 +18,15 @@ vi.mock("justif", async (importOriginal) => {
         justify: vi.fn((targets: Iterable<Element>, options: Record<string, unknown>) => {
             const index = justifyCalls.length;
             justifyCalls.push({ els: [...targets] as HTMLElement[], options });
-            for (const el of targets) el.setAttribute("data-justif", "");
+            const els = [...targets];
+            for (const el of els) el.setAttribute("data-justif", "");
             return {
                 ready: Promise.resolve(),
-                destroy: () => destroyed.push(index),
+                // Like justif's own: tearing down restores the native paragraph.
+                destroy: () => {
+                    destroyed.push(index);
+                    for (const el of els) el.removeAttribute("data-justif");
+                },
             };
         }),
     };
@@ -145,15 +150,35 @@ describe("bootAuto", () => {
         const controllers = handle.controllers;
         expect(controllers).toHaveLength(1);
 
-        // The mock's data-justif marker makes the first paragraph "adopted",
-        // mirroring production where an enhanced paragraph no longer matches.
         addParagraph("Second scan.");
         await handle.reconfigure();
 
+        // Torn down, then the whole page rescanned: old and new paragraphs alike.
         expect(destroyed).toEqual([0]);
         expect(handle.controllers).toBe(controllers);
         expect(controllers).toHaveLength(1);
-        expect(justifyCalls[1]!.els.map((el) => el.textContent)).toEqual(["Second scan."]);
+        expect(justifyCalls[1]!.els.map((el) => el.textContent)).toEqual([
+            "First scan.",
+            "Second scan.",
+        ]);
+    });
+
+    it("serializes overlapping reconfigure() calls instead of enhancing twice", async () => {
+        const en = addParagraph("One paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+        const controllers = handle.controllers;
+
+        // Called back to back, as a theme toggle and a resize handler might.
+        await Promise.all([handle.reconfigure(), handle.reconfigure()]);
+
+        // Every paragraph is managed by exactly one live controller.
+        expect(controllers).toHaveLength(1);
+        expect(justifyCalls).toHaveLength(3);
+        expect(justifyCalls.every((call) => call.els.length === 1 && call.els[0] === en)).toBe(
+            true,
+        );
+        expect(destroyed.toSorted()).toEqual([0, 1]);
     });
 
     it("forwards onSkip and defaults it from debug", async () => {

@@ -229,7 +229,12 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
         ).then(() => undefined);
 
     const controllers: JustifyController[] = [];
-    /** The latest scan; undefined until the boot has run. */
+    /**
+     * The end of the latest scan or rebuild; undefined until the boot has run.
+     * Every reconfigure() queues behind it, so two calls never scan at once: a
+     * scan that overlapped another, still waiting on its hyphenator, would
+     * find the same paragraphs unenhanced and start a second controller each.
+     */
     let pending: Promise<void> | undefined;
     let resolveBooted!: () => void;
     const booted = new Promise<void>((resolve) => {
@@ -282,13 +287,18 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
         booted,
         reconfigure(): Promise<void> {
             if (pending === undefined) return Promise.resolve();
-            return pending.then(async () => {
+            const rebuilt = pending.then(() => {
                 for (const controller of controllers) controller.destroy();
                 controllers.length = 0;
-                pending = start(controllers);
-                await pending;
-                await Promise.allSettled(controllers.map((c) => c.ready));
+                return start(controllers);
             });
+            // Claimed synchronously, before any caller can chain on the old
+            // tail. Only the scan is queued on, not font settling, and a
+            // rebuild that throws must not wedge every later call.
+            pending = rebuilt.catch(() => undefined);
+            return rebuilt
+                .then(() => Promise.allSettled(controllers.map((c) => c.ready)))
+                .then(() => undefined);
         },
     };
     window.justif = handle;
