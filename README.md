@@ -83,11 +83,19 @@ import "virtual:justif/auto";
 
 justif reads each paragraph once and then owns its DOM, so scripts that
 rewrite text — math rendering, syntax highlighting, translation — must run
-first. The injected auto entry sits in `<head>`, so it runs before your own
-module entries. Two fixes, in order of preference:
+first. The injected auto entry is appended to `<head>`, so it runs before any
+module entry that comes later in the document. Two fixes, in order of
+preference:
 
-- `inject: false`, then import `virtual:justif/auto` from your entry _after_
-  the transform has run (e.g. after `renderMathInElement(...)`).
+- `inject: false`, then load `virtual:justif/auto` from your entry once the
+  transform has run. Use a dynamic `import()`: a static `import` is hoisted
+  and would run before the transform.
+
+    ```ts
+    renderMathInElement(document.body);
+    await import("virtual:justif/auto");
+    ```
+
 - `defer: true` — justif's `data-justif-defer`: the page is read one task
   after `DOMContentLoaded`, after every module script and every
   `DOMContentLoaded` listener. The trade-off is that native justification may
@@ -141,7 +149,7 @@ import type { Hyphenator, JustifAutoHandle } from "vite-plugin-justif/runtime/au
 - `booted` — resolves once layout has converged for every group.
 - `reconfigure()` — re-reads `--justif-*` configuration and rebuilds
   controllers. (There is no style watcher; call it when config changes.) A
-  no-op until a deferred boot has run.
+  no-op until the boot has run.
 
 [JustifyController]: https://github.com/lyallcooper/justif
 
@@ -173,7 +181,10 @@ article {
 ```
 
 Invalid values fall back to the default with one console warning per
-property and value. (There is no live style watcher — call
+property and value. Unlike the CDN script, the plugin does not register the
+properties with `@property`, so values are read as written: use plain numbers,
+percentages, and lowercase keywords — `calc()` and exponent notation (`1e-2`)
+read as invalid. (There is no live style watcher — call
 `window.justif.reconfigure()` after changing them at runtime.)
 
 See the [justif README](https://github.com/lyallcooper/justif) for the available

@@ -97,7 +97,8 @@ export interface JustifAutoHandle {
      * Re-read the `--justif-*` configuration and rebuild controllers.
      * Unlike the CDN script there is no watcher; changes apply when this
      * is called. Resolves once the rebuilt controllers have settled; a no-op
-     * before a deferred boot has run.
+     * before the boot has run (a deferred one, or one waiting on
+     * DOMContentLoaded).
      */
     reconfigure: () => Promise<void>;
 }
@@ -197,7 +198,17 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
                 group.els.push(el);
             }
         }
-        return [...groups.values()];
+        const collected = [...groups.values()];
+        if (debug) {
+            for (const { id, options: layout, els } of collected) {
+                console.info("justif: group", {
+                    language: id ?? "(unbundled: spacing only)",
+                    options: layout,
+                    paragraphs: els.length,
+                });
+            }
+        }
+        return collected;
     };
 
     /**

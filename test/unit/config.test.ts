@@ -137,7 +137,7 @@ describe("parseCssConfiguration", () => {
         expect(options).toEqual({ hangingPunctuation: { characters: { start: "“‘([" } } });
         // Order and repeats are one configuration.
         expect(parse({ "--justif-hanging-characters-start": `'[(‘““'` }).key).toBe(key);
-        expect(key).toBe(`hanging-characters-start:${[..."“‘(["].sort().join("")}`);
+        expect(key).toBe(`hanging-characters-start:${[..."“‘(["].toSorted().join("")}`);
     });
 
     it("resolves CSS string escapes, including invalid hex to U+FFFD", () => {
@@ -161,7 +161,7 @@ describe("parseCssConfiguration", () => {
     });
 
     it("treats the built-in character sets as the default", () => {
-        const reversed = [...hangingCharacters.end].reverse().join("");
+        const reversed = [...hangingCharacters.end].toReversed().join("");
         const { options, key } = parse({
             "--justif-hanging-characters-start": JSON.stringify(hangingCharacters.start),
             "--justif-hanging-characters-end": JSON.stringify(reversed),

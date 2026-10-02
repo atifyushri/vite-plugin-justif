@@ -10,6 +10,9 @@
  * Only the parsing is kept: `@property` registration and the transition
  * watcher that make values live-update are CDN-script machinery and are not
  * reproduced here (see `window.justif.reconfigure()` for manual refresh).
+ * Without registration computed values arrive as written, so what the drop-in
+ * gets normalized — `calc()`, exponent notation, uppercase keywords — reads
+ * as invalid here.
  */
 import {
     hangingCharacters,
@@ -76,7 +79,7 @@ function parseFraction(raw: string): number | undefined {
  */
 function parseCssString(raw: string): string | undefined {
     const quote = raw[0];
-    if (raw.length < 2 || (quote !== '"' && quote !== "'") || raw.at(-1) !== quote) {
+    if (raw.length < 2 || (quote !== '"' && quote !== "'") || raw[raw.length - 1] !== quote) {
         return undefined;
     }
     const body = raw.slice(1, -1);
