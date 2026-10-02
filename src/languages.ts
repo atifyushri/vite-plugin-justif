@@ -2,7 +2,8 @@
  * Everything mirrored from justif's drop-in surface, in one place: the
  * bundled hyphenation languages (package.json `./hyphenate/*` exports), the
  * naming conventions of their modules, the BCP 47 resolution the drop-in's
- * `moduleFor` performs (src/auto.ts), and the stock candidate selector.
+ * `moduleFor` performs (src/auto-languages.ts), and the stock candidate
+ * selector (src/auto.ts).
  *
  * justif does not export these internals, so they are hand-ported here.
  * `test/unit/parity.test.ts` checks this file against the installed justif
