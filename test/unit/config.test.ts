@@ -3,6 +3,7 @@
  * upstream mirror #2 (src/runtime/config.ts), which ports justif's
  * auto-options logic that parity tests cannot check mechanically.
  */
+import { hangingCharacters } from "justif";
 import { describe, it, expect } from "vitest";
 import {
     CSS_PROPERTIES,
@@ -63,7 +64,7 @@ describe("parseCssConfiguration", () => {
 
     it("drops values matching the library default (no key, no option)", () => {
         // layoutDefaults.expansion = { max: 0.02, shrink: 0.02 } and
-        // hangingPunctuation = "line-end-only" in justif 0.7.
+        // hangingPunctuation = "line-end-only" in justif 0.9.
         const { options, key } = parse({
             "--justif-expansion": "0.02",
             "--justif-hanging-punctuation": "line-end-only",
@@ -72,16 +73,30 @@ describe("parseCssConfiguration", () => {
         expect(key).toBe("");
     });
 
-    it("ignores invalid values like CSS does", () => {
-        const { options, key } = parse({
+    it("ignores invalid values like CSS does, reporting them as written", () => {
+        const { options, key, invalid } = parse({
             "--justif-expansion": "bogus",
             "--justif-tracking": "-1",
             "--justif-hanging-punctuation": "everything",
             // The table-backed protrusion model is API-only.
             "--justif-protrusion": "0.5",
+            // `none` means nothing for a spacing limit.
+            "--justif-space-stretch": "none",
         });
         expect(options).toEqual({});
         expect(key).toBe("");
+        expect(invalid).toEqual([
+            { property: "--justif-hanging-punctuation", value: "everything" },
+            { property: "--justif-protrusion", value: "0.5" },
+            { property: "--justif-expansion", value: "bogus" },
+            { property: "--justif-tracking", value: "-1" },
+            { property: "--justif-space-stretch", value: "none" },
+        ]);
+    });
+
+    it("reports nothing invalid for unset, auto and default values", () => {
+        expect(parse({ "--justif-expansion": "auto" }).invalid).toEqual([]);
+        expect(parse({ "--justif-expansion": "2%" }).invalid).toEqual([]);
     });
 
     it("clamps last-line fractions to 1", () => {
@@ -115,6 +130,65 @@ describe("parseCssConfiguration", () => {
         const b = parse({ "--justif-space-shrink": "10%" }).key;
         expect(a).toBe(b);
         expect(a).toBe("space-shrink:0.100000");
+    });
+
+    it("parses hanging character sets as CSS strings, keyed on the set", () => {
+        const { options, key } = parse({ "--justif-hanging-characters-start": `"“‘(["` });
+        expect(options).toEqual({ hangingPunctuation: { characters: { start: "“‘([" } } });
+        // Order and repeats are one configuration.
+        expect(parse({ "--justif-hanging-characters-start": `'[(‘““'` }).key).toBe(key);
+        expect(key).toBe(`hanging-characters-start:${[..."“‘(["].toSorted().join("")}`);
+    });
+
+    it("resolves CSS string escapes, including invalid hex to U+FFFD", () => {
+        expect(parse({ "--justif-hanging-characters-end": `"\\2E\\2C x\\""` }).options).toEqual({
+            hangingPunctuation: { characters: { end: '.,x"' } },
+        });
+        expect(parse({ "--justif-hanging-characters-end": `"\\0 \\D800"` }).options).toEqual({
+            hangingPunctuation: { characters: { end: "\uFFFD\uFFFD" } },
+        });
+    });
+
+    it("maps none to an empty side and rejects unquoted sets", () => {
+        expect(parse({ "--justif-hanging-characters-end": "none" })).toEqual({
+            options: { hangingPunctuation: { characters: { end: "" } } },
+            key: "hanging-characters-end:none",
+            invalid: [],
+        });
+        expect(parse({ "--justif-hanging-characters-start": "abc" }).invalid).toEqual([
+            { property: "--justif-hanging-characters-start", value: "abc" },
+        ]);
+    });
+
+    it("treats the built-in character sets as the default", () => {
+        const reversed = [...hangingCharacters.end].toReversed().join("");
+        const { options, key } = parse({
+            "--justif-hanging-characters-start": JSON.stringify(hangingCharacters.start),
+            "--justif-hanging-characters-end": JSON.stringify(reversed),
+        });
+        expect(options).toEqual({});
+        expect(key).toBe("");
+    });
+
+    it("merges edges and character sides into one hanging option", () => {
+        const { options, key } = parse({
+            "--justif-hanging-punctuation": "all-line-edges",
+            "--justif-hanging-characters-start": `"("`,
+            "--justif-hanging-characters-end": "none",
+        });
+        expect(options).toEqual({
+            hangingPunctuation: {
+                edges: "all-line-edges",
+                characters: { start: "(", end: "" },
+            },
+        });
+        expect(key).toBe(
+            "hanging-punctuation:all-line-edges;hanging-characters-start:(;hanging-characters-end:none",
+        );
+        // Edges alone keep the plain string form.
+        expect(parse({ "--justif-hanging-punctuation": "none" }).options).toEqual({
+            hangingPunctuation: "none",
+        });
     });
 
     it("reads every property exactly once", () => {

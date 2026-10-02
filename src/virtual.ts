@@ -30,6 +30,8 @@ export interface AutoModuleOptions {
     selector: string;
     /** Log a reason for every paragraph kept on native layout. */
     debug: boolean;
+    /** Boot one task after DOMContentLoaded (justif's `data-justif-defer`). */
+    defer: boolean;
     /** Cloak fallback reveal in ms, or `false` for reveal-on-booted only. */
     cloakTimeout: number | false;
 }
@@ -96,6 +98,7 @@ export function generateAutoModule(options: AutoModuleOptions): string {
         `bootAuto({`,
         `  selector: ${JSON.stringify(options.selector)},`,
         `  debug: ${options.debug},`,
+        `  defer: ${options.defer},`,
         `  cloakTimeout: ${JSON.stringify(options.cloakTimeout)},`,
         `  loaders: ${loaderTable(options.languages)},`,
         `});`,

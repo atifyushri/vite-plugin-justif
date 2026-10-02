@@ -50,6 +50,15 @@ export interface JustifVitePluginOptions {
      */
     debug?: boolean;
     /**
+     * Read the page one task after DOMContentLoaded rather than as soon as the
+     * DOM is parsed — justif's `data-justif-defer`. Enable it when your own
+     * scripts rewrite paragraph text (math rendering, syntax highlighting):
+     * the injected auto entry sits in `<head>`, so it otherwise runs before
+     * your module entries. Native justification may paint first, so it pairs
+     * well with `cloak`. Defaults to `false`.
+     */
+    defer?: boolean;
+    /**
      * Inject a module script importing `virtual:justif/auto` into every HTML
      * entry file. Defaults to `true`. Set `false` to manage the import from
      * your own entry (useful under a strict Content-Security-Policy, where
@@ -103,6 +112,7 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
     }
     const selector = options.selector ?? DEFAULT_SELECTOR;
     const debug = options.debug ?? false;
+    const defer = options.defer ?? false;
     const inject = options.inject ?? true;
     const rawCloak = options.cloak ?? false;
     const cloak =
@@ -135,6 +145,7 @@ export function vitePluginJustif(options: JustifVitePluginOptions = {}): Plugin 
                         languages,
                         selector,
                         debug,
+                        defer,
                         // Meaningful even when this config never cloaks: the
                         // attribute may be hand-written under a strict CSP.
                         cloakTimeout: cloak === false ? CLOAK_REVEAL_TIMEOUT_MS : cloak.timeout,

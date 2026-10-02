@@ -151,6 +151,15 @@ blockquote {
     font-style: italic;
 }
 
+/* Per-section typography through justif's --justif-* properties: the quote's
+ * opening mark hangs into the margin on its first line, and the character set
+ * extends justif's built-in quotes with brackets. A distinct configuration, so
+ * the quote gets its own controller (see window.justif.controllers). */
+blockquote p {
+    --justif-hanging-punctuation: first-line-and-line-ends;
+    --justif-hanging-characters-start: "'\"‘’“”‚„‹›«»([";
+}
+
 blockquote footer {
     margin-top: 0.5em;
     font-style: normal;

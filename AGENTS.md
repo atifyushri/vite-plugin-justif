@@ -25,7 +25,7 @@ parity tests); consumers need only `engines` (Node >= 20.19, or Bun/Deno).
 ## Architecture
 
 - `src/index.ts` — plugin factory. Flat options `{ languages, selector, debug,
-inject }`; both virtual modules are always registered (unimported virtual
+defer, inject, cloak }`; both virtual modules are always registered (unimported virtual
   modules cost nothing), only HTML injection is conditional.
 - `src/virtual.ts` — virtual module ids and codegen. `virtual:justif` uses
   static imports; `virtual:justif/auto` uses static-STRING dynamic imports so
@@ -36,7 +36,8 @@ inject }`; both virtual modules are always registered (unimported virtual
   drop-in (which does not export them).
 - `src/runtime/config.ts` — **upstream mirror #2**: the `--justif-*` CSS
   configuration parser, including the serialized grouping key.
-- `src/runtime/auto.ts` — browser bootstrap (`bootAuto`), published as
+- `src/runtime/auto.ts` — browser bootstrap (`bootAuto`), including the
+  drop-in's boot timing (`defer` = `data-justif-defer`), published as
   `vite-plugin-justif/runtime/auto` and deliberately NOT re-exported from the
   main entry (keeps justif's browser engine out of `vite.config.ts` in Node).
 - `example/` — standalone demo app; imports the plugin from `../dist` (build
@@ -49,9 +50,11 @@ inject }`; both virtual modules are always registered (unimported virtual
 
 - `test/unit/parity.test.ts` pins the mirrors to the installed justif dist.
   When bumping the `justif` dependency, run the tests; on parity failure,
-  update `src/languages.ts` to match upstream. `resolveJustifLanguage` and the
-  config parser cannot be auto-checked — re-diff them against justif's
-  `src/auto.ts` / auto-options source on every justif bump.
+  update `src/languages.ts` to match upstream. The parity test also pins the
+  `--justif-*` property list and its key order. `resolveJustifLanguage` and
+  the parser's value grammar cannot be auto-checked — re-diff them against
+  justif's `src/auto-languages.ts` (`moduleFor`), `src/auto-options.ts`, and
+  `src/auto.ts` (boot timing, grouping) on every justif bump.
 - The grouping key in `runtime/auto.ts` and the key serialization in
   `runtime/config.ts` must stay byte-compatible with justif's drop-in so
   paragraphs group into controllers identically.

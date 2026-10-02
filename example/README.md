@@ -30,6 +30,8 @@ build — check the network tab to watch the per-language chunks load on demand.
   `virtual:justif/auto` entry itself. Sections carry `lang` attributes, which
   drive hyphenation-pattern choice.
 - `public/style.css` — plain CSS; the only contract with the plugin is
-  `text-align: justify` on candidate paragraphs.
+  `text-align: justify` on candidate paragraphs. The blockquote shows
+  per-section configuration through `--justif-*` properties: a hanging opening
+  quote and a custom `--justif-hanging-characters-start` set.
 - The browser console — `window.justif` exposes `controllers`, `booted`, and
   `reconfigure()`.

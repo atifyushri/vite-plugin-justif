@@ -212,6 +212,122 @@ describe("bootAuto", () => {
         }
     });
 
+    it("warns once per invalid property-and-value pair", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        try {
+            for (let i = 0; i < 3; i++) {
+                addParagraph("Badly configured.").style.setProperty("--justif-expansion", "bogus");
+            }
+            const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+            await handle.booted;
+            // Invalid values fall back to the default: still one group.
+            expect(justifyCalls).toHaveLength(1);
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(warn.mock.calls[0]![0]).toContain('--justif-expansion value "bogus"');
+        } finally {
+            warn.mockRestore();
+        }
+    });
+
+    it("defer reads the page one task after DOMContentLoaded, after its listeners", async () => {
+        vi.useFakeTimers();
+        const readyState = vi.spyOn(document, "readyState", "get").mockReturnValue("interactive");
+        try {
+            // Not yet a candidate: a later DOMContentLoaded listener makes it one,
+            // so a scan that runs during the dispatch (or before it) finds nothing.
+            const p = addParagraph("Rewritten by a late script.");
+            p.style.textAlign = "left";
+            const handle = bootAuto({
+                defer: true,
+                loaders: { "en-us": async () => undefined },
+            })!;
+            document.addEventListener("DOMContentLoaded", () => (p.style.textAlign = "justify"), {
+                once: true,
+            });
+            // Published immediately, with the controllers array to be filled.
+            expect(window.justif).toBe(handle);
+            // Nothing boots on timers alone, however long they run.
+            await vi.advanceTimersByTimeAsync(1000);
+            expect(justifyCalls).toHaveLength(0);
+            // A no-op until the boot has run, rather than a premature scan.
+            await handle.reconfigure();
+            await vi.advanceTimersByTimeAsync(0);
+            expect(justifyCalls).toHaveLength(0);
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await vi.advanceTimersByTimeAsync(0);
+            await handle.booted;
+            expect(justifyCalls).toHaveLength(1);
+            expect(justifyCalls[0]!.els).toEqual([p]);
+
+            // `load` arriving afterwards must not boot a second time.
+            window.dispatchEvent(new Event("load"));
+            await vi.advanceTimersByTimeAsync(0);
+            expect(justifyCalls).toHaveLength(1);
+            expect(handle.controllers).toHaveLength(1);
+        } finally {
+            readyState.mockRestore();
+            vi.useRealTimers();
+        }
+    });
+
+    it("defer falls back to load when DOMContentLoaded was already missed", async () => {
+        vi.useFakeTimers();
+        const readyState = vi.spyOn(document, "readyState", "get").mockReturnValue("interactive");
+        try {
+            addParagraph("Injected late.");
+            const handle = bootAuto({
+                defer: true,
+                loaders: { "en-us": async () => undefined },
+            })!;
+            await vi.advanceTimersByTimeAsync(1000);
+            expect(justifyCalls).toHaveLength(0);
+            window.dispatchEvent(new Event("load"));
+            await vi.advanceTimersByTimeAsync(0);
+            await handle.booted;
+            expect(justifyCalls).toHaveLength(1);
+        } finally {
+            readyState.mockRestore();
+            vi.useRealTimers();
+        }
+    });
+
+    it("defer boots after one task when the document is already complete", async () => {
+        vi.useFakeTimers();
+        try {
+            addParagraph("Already loaded.");
+            const handle = bootAuto({
+                defer: true,
+                loaders: { "en-us": async () => undefined },
+            })!;
+            // Not synchronously: the scan waits for the queued task.
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(justifyCalls).toHaveLength(0);
+            await vi.advanceTimersByTimeAsync(0);
+            await handle.booted;
+            expect(justifyCalls).toHaveLength(1);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("waits for DOMContentLoaded when called while the document is loading", async () => {
+        const readyState = vi.spyOn(document, "readyState", "get").mockReturnValue("loading");
+        try {
+            addParagraph("Parsed later.");
+            const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+            // Long enough for a premature boot's loader and justify() to land.
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            expect(justifyCalls).toHaveLength(0);
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await handle.booted;
+            expect(justifyCalls).toHaveLength(1);
+        } finally {
+            readyState.mockRestore();
+        }
+    });
+
     it("leaves an uncloaked page alone", async () => {
         addParagraph("A paragraph.");
         const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;

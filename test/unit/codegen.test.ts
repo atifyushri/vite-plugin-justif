@@ -77,6 +77,7 @@ describe("generateAutoModule", () => {
             languages: ["en-us", "ca"],
             selector: "article p",
             debug: true,
+            defer: false,
             cloakTimeout: 1500,
         });
         expect(code).toContain("cloakTimeout: 1500");
@@ -100,11 +101,13 @@ describe("generateAutoModule", () => {
             languages: ["en-us"],
             selector: 'p[data-x="y"]',
             debug: false,
+            defer: true,
             cloakTimeout: false,
         });
         expect(code).toContain('selector: "p[data-x=\\"y\\"]"');
         expect(code).toContain("debug: false");
         expect(code).toContain("cloakTimeout: false");
+        expect(code).toContain("defer: true");
     });
 });
 
@@ -117,6 +120,7 @@ describe("vitePluginJustif options", () => {
         }
         expect(auto).toContain(`selector: "p, li, dd, blockquote, figcaption"`);
         expect(auto).toContain("debug: false");
+        expect(auto).toContain("defer: false");
         expect(plugin.transformIndexHtml).toBeDefined();
     });
 
@@ -130,15 +134,17 @@ describe("vitePluginJustif options", () => {
         expect(auto).not.toContain("hyphenateCa");
     });
 
-    it("bakes selector and debug into the auto module even without injection", () => {
+    it("bakes selector, debug and defer into the auto module even without injection", () => {
         const plugin = vitePluginJustif({
             selector: ".prose p",
             debug: true,
+            defer: true,
             inject: false,
         });
         const auto = loadVirtual(plugin, RESOLVED_AUTO_MODULE_ID)!;
         expect(auto).toContain(`selector: ".prose p"`);
         expect(auto).toContain("debug: true");
+        expect(auto).toContain("defer: true");
         expect(plugin.transformIndexHtml).toBeUndefined();
     });
 

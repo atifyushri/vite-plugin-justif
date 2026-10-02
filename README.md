@@ -15,7 +15,8 @@ solves both problems:
 - HTML injection — a module script importing `virtual:justif/auto` is added to
   every `index.html` entry, so enabling the plugin is the whole setup.
 
-Requires Vite `^6.3.0 || ^7.0.0 || ^8.0.0` and `justif` as a peer dependency.
+Requires Vite `^6.3.0 || ^7.0.0 || ^8.0.0` and `justif` `^0.9.0` as peer
+dependencies.
 
 **[Live demo](https://atifyushri.github.io/vite-plugin-justif/)** — justified,
 hyphenated prose in three languages, each shipping as its own lazy chunk, with
@@ -55,8 +56,12 @@ vitePluginJustif({
     /** Candidate selector for the auto-enhancement
      *  (default: "p, li, dd, blockquote, figcaption"). */
     selector: "article p",
-    /** Log a reason for every paragraph kept on native layout. */
+    /** Log a reason for every paragraph kept on native layout,
+     *  and any unrecognized --justif-* property. */
     debug: true,
+    /** Wait for scripts that rewrite text on DOMContentLoaded
+     *  (default: false). See "Playing Nicely With Other Scripts". */
+    defer: true,
     /** Inject the auto entry into every HTML file (default: true). */
     inject: false,
     /** Hide candidates until typeset — no flash of native justification
@@ -66,12 +71,35 @@ vitePluginJustif({
 ```
 
 Set `inject: false` when a strict Content-Security-Policy blocks inline
-scripts — then import `virtual:justif/auto` from your own entry. `selector`
-and `debug` are baked into the generated module, so they apply either way.
+scripts — then import `virtual:justif/auto` from your own entry. `selector`,
+`debug`, and `defer` are baked into the generated module, so they apply either
+way.
 
 ```ts
 import "virtual:justif/auto";
 ```
+
+### Playing Nicely With Other Scripts
+
+justif reads each paragraph once and then owns its DOM, so scripts that
+rewrite text — math rendering, syntax highlighting, translation — must run
+first. The injected auto entry is appended to `<head>`, so it runs before any
+module entry that comes later in the document. Two fixes, in order of
+preference:
+
+- `inject: false`, then load `virtual:justif/auto` from your entry once the
+  transform has run. Use a dynamic `import()`: a static `import` is hoisted
+  and would run before the transform.
+
+    ```ts
+    renderMathInElement(document.body);
+    await import("virtual:justif/auto");
+    ```
+
+- `defer: true` — justif's `data-justif-defer`: the page is read one task
+  after `DOMContentLoaded`, after every module script and every
+  `DOMContentLoaded` listener. The trade-off is that native justification may
+  paint first and reflow; `cloak` hides that.
 
 ### Avoiding the Enhancement Flash
 
@@ -120,7 +148,8 @@ import type { Hyphenator, JustifAutoHandle } from "vite-plugin-justif/runtime/au
   `reconfigure()` so held references stay live.
 - `booted` — resolves once layout has converged for every group.
 - `reconfigure()` — re-reads `--justif-*` configuration and rebuilds
-  controllers. (There is no style watcher; call it when config changes.)
+  controllers. (There is no style watcher; call it when config changes.) A
+  no-op until the boot has run.
 
 [JustifyController]: https://github.com/lyallcooper/justif
 
@@ -137,11 +166,26 @@ them on any element and they apply per group, e.g.
 }
 ```
 
-The full surface: `--justif-hanging-punctuation`, `--justif-protrusion`,
-`--justif-expansion`, `--justif-tracking`, `--justif-last-line-min-width`,
-`--justif-last-line-fit`, `--justif-space-stretch`, `--justif-space-shrink`.
-(There is no live style watcher — call `window.justif.reconfigure()` after
-changing them at runtime.)
+The full surface: `--justif-hanging-punctuation`,
+`--justif-hanging-characters-start`, `--justif-hanging-characters-end`,
+`--justif-protrusion`, `--justif-expansion`, `--justif-tracking`,
+`--justif-last-line-min-width`, `--justif-last-line-fit`,
+`--justif-space-stretch`, `--justif-space-shrink`. The character sets are
+quoted strings that replace the built-in set for that edge (`none` hangs
+nothing there):
+
+```css
+article {
+    --justif-hanging-characters-start: "‘’“”([{";
+}
+```
+
+Invalid values fall back to the default with one console warning per
+property and value. Unlike the CDN script, the plugin does not register the
+properties with `@property`, so values are read as written: use plain numbers,
+percentages, and lowercase keywords — `calc()` and exponent notation (`1e-2`)
+read as invalid. (There is no live style watcher — call
+`window.justif.reconfigure()` after changing them at runtime.)
 
 See the [justif README](https://github.com/lyallcooper/justif) for the available
 properties, keywords, and measurement semantics.
@@ -159,6 +203,8 @@ import { bootAuto } from "vite-plugin-justif/runtime/auto";
 bootAuto({
     selector: "p, li, dd, blockquote, figcaption",
     debug: false,
+    defer: false,
+    cloakTimeout: 1500,
     loaders: {
         "en-us": () => import("justif/hyphenate/en-us").then((m) => m.hyphenateEnUS),
         de: () => import("justif/hyphenate/de").then((m) => m.hyphenateDe),
