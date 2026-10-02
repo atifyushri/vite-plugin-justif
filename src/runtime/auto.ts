@@ -96,8 +96,9 @@ export interface JustifAutoHandle {
     /**
      * Re-read the `--justif-*` configuration and rebuild controllers.
      * Unlike the CDN script there is no watcher; changes apply when this
-     * is called. Resolves once the rebuilt controllers have settled; a no-op
-     * before the boot has run (a deferred one, or one waiting on
+     * is called. Overlapping calls run one after another; each resolves once
+     * the page is rebuilt and settled with no further call queued behind it.
+     * A no-op before the boot has run (a deferred one, or one waiting on
      * DOMContentLoaded).
      */
     reconfigure: () => Promise<void>;
@@ -229,7 +230,12 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
         ).then(() => undefined);
 
     const controllers: JustifyController[] = [];
-    /** The latest scan; undefined until the boot has run. */
+    /**
+     * The end of the latest scan or rebuild; undefined until the boot has run.
+     * Every reconfigure() queues behind it, so two calls never scan at once: a
+     * scan that overlapped another, still waiting on its hyphenator, would
+     * find the same paragraphs unenhanced and start a second controller each.
+     */
     let pending: Promise<void> | undefined;
     let resolveBooted!: () => void;
     const booted = new Promise<void>((resolve) => {
@@ -273,6 +279,21 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
         });
     }
 
+    /**
+     * Resolve a reconfigure() only once the page is rebuilt: a call queued
+     * behind this one has already torn the controllers down by the time this
+     * one's scan finishes, so follow the queue to its end before awaiting
+     * fonts. `pending` is always set once a reconfigure() has run.
+     */
+    const settled = async (): Promise<void> => {
+        let tail: Promise<void> | undefined;
+        do {
+            tail = pending;
+            await tail;
+        } while (tail !== pending);
+        await Promise.allSettled(controllers.map((c) => c.ready));
+    };
+
     const handle: JustifAutoHandle = {
         justify,
         unjustify,
@@ -282,13 +303,26 @@ export function bootAuto(options: AutoBootOptions = {}): JustifAutoHandle | unde
         booted,
         reconfigure(): Promise<void> {
             if (pending === undefined) return Promise.resolve();
-            return pending.then(async () => {
-                for (const controller of controllers) controller.destroy();
+            const rebuilt = pending.then(() => {
+                // Every controller is torn down and the array emptied even if
+                // one destroy() throws; the caller still sees the first error.
+                let failure: { error: unknown } | undefined;
+                for (const controller of controllers) {
+                    try {
+                        controller.destroy();
+                    } catch (error) {
+                        failure ??= { error };
+                    }
+                }
                 controllers.length = 0;
-                pending = start(controllers);
-                await pending;
-                await Promise.allSettled(controllers.map((c) => c.ready));
+                if (failure !== undefined) throw failure.error;
+                return start(controllers);
             });
+            // Claimed synchronously, before any caller can chain on the old
+            // tail. Only the scan is queued on, not font settling, and a
+            // rejected rebuild must not reject every later call.
+            pending = rebuilt.catch(() => undefined);
+            return rebuilt.then(settled);
         },
     };
     window.justif = handle;

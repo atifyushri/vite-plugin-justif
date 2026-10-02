@@ -10,6 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const justifyCalls: Array<{ els: HTMLElement[]; options: Record<string, unknown> }> = [];
 const destroyed: number[] = [];
+/** Per-test knobs for the mocked controllers. */
+const mockControl: { ready: () => Promise<void>; destroyThrowsOnce?: Error } = {
+    ready: () => Promise.resolve(),
+};
 
 vi.mock("justif", async (importOriginal) => {
     const original = await importOriginal<typeof import("justif")>();
@@ -18,10 +22,20 @@ vi.mock("justif", async (importOriginal) => {
         justify: vi.fn((targets: Iterable<Element>, options: Record<string, unknown>) => {
             const index = justifyCalls.length;
             justifyCalls.push({ els: [...targets] as HTMLElement[], options });
-            for (const el of targets) el.setAttribute("data-justif", "");
+            const els = [...targets];
+            for (const el of els) el.setAttribute("data-justif", "");
             return {
-                ready: Promise.resolve(),
-                destroy: () => destroyed.push(index),
+                ready: mockControl.ready(),
+                // Like justif's own: tearing down restores the native paragraph.
+                destroy: () => {
+                    const error = mockControl.destroyThrowsOnce;
+                    if (error !== undefined) {
+                        mockControl.destroyThrowsOnce = undefined;
+                        throw error;
+                    }
+                    destroyed.push(index);
+                    for (const el of els) el.removeAttribute("data-justif");
+                },
             };
         }),
     };
@@ -47,6 +61,8 @@ afterEach(() => {
     document.documentElement.removeAttribute("data-justif-cloak");
     justifyCalls.length = 0;
     destroyed.length = 0;
+    mockControl.ready = () => Promise.resolve();
+    mockControl.destroyThrowsOnce = undefined;
     delete window.justif;
     vi.clearAllMocks();
 });
@@ -145,15 +161,83 @@ describe("bootAuto", () => {
         const controllers = handle.controllers;
         expect(controllers).toHaveLength(1);
 
-        // The mock's data-justif marker makes the first paragraph "adopted",
-        // mirroring production where an enhanced paragraph no longer matches.
         addParagraph("Second scan.");
         await handle.reconfigure();
 
+        // Torn down, then the whole page rescanned: old and new paragraphs alike.
         expect(destroyed).toEqual([0]);
         expect(handle.controllers).toBe(controllers);
         expect(controllers).toHaveLength(1);
-        expect(justifyCalls[1]!.els.map((el) => el.textContent)).toEqual(["Second scan."]);
+        expect(justifyCalls[1]!.els.map((el) => el.textContent)).toEqual([
+            "First scan.",
+            "Second scan.",
+        ]);
+    });
+
+    it("serializes overlapping reconfigure() calls instead of enhancing twice", async () => {
+        const en = addParagraph("One paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+        const controllers = handle.controllers;
+
+        // Called back to back, as a theme toggle and a resize handler might.
+        await Promise.all([handle.reconfigure(), handle.reconfigure()]);
+
+        // Every paragraph is managed by exactly one live controller.
+        expect(controllers).toHaveLength(1);
+        expect(justifyCalls).toHaveLength(3);
+        expect(justifyCalls.every((call) => call.els.length === 1 && call.els[0] === en)).toBe(
+            true,
+        );
+        expect(destroyed.toSorted()).toEqual([0, 1]);
+    });
+
+    it("resolves an earlier reconfigure() only once a queued one has rebuilt", async () => {
+        addParagraph("One paragraph.");
+        const handle = bootAuto({
+            loaders: { "en-us": () => new Promise((resolve) => setTimeout(resolve, 5)) },
+        })!;
+        await handle.booted;
+
+        const first = handle.reconfigure();
+        const second = handle.reconfigure();
+        await first;
+        // Not mid-teardown: the second rebuild has already landed.
+        expect(handle.controllers).toHaveLength(1);
+        expect(justifyCalls).toHaveLength(3);
+        await second;
+        expect(handle.controllers).toHaveLength(1);
+    });
+
+    it("queues on the scan, not on font settling", async () => {
+        addParagraph("One paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+
+        // Fonts that never settle must not hold back the next rebuild's scan.
+        mockControl.ready = () => new Promise<void>(() => {});
+        void handle.reconfigure();
+        void handle.reconfigure();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(justifyCalls).toHaveLength(3);
+        expect(handle.controllers).toHaveLength(1);
+    });
+
+    it("recovers from a destroy() that throws", async () => {
+        addParagraph("One paragraph.");
+        const handle = bootAuto({ loaders: { "en-us": async () => undefined } })!;
+        await handle.booted;
+
+        mockControl.destroyThrowsOnce = new Error("boom");
+        await expect(handle.reconfigure()).rejects.toThrow("boom");
+        // The failed controller is not left in the array to fail again.
+        expect(handle.controllers).toHaveLength(0);
+        // Not wedged: the next call scans. (The paragraph whose teardown threw
+        // still carries its enhancement, so only the new one is a candidate.)
+        const fresh = addParagraph("Added afterwards.");
+        await handle.reconfigure();
+        expect(handle.controllers).toHaveLength(1);
+        expect(justifyCalls.at(-1)!.els).toEqual([fresh]);
     });
 
     it("forwards onSkip and defaults it from debug", async () => {
